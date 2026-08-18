@@ -821,34 +821,15 @@ SilicoForge/
 
 ---
 
-## Installation
-
-```bash
- git clone https://github.com/marakahansika27-prog/SilicoForge.git
+git clone https://github.com/marakahansika27-prog/SilicoForge.git
 cd SilicoForge
+
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
 pip install -r requirements.txt
-```
 
----
-
-## Quick Start
-
-```bash
-python scripts/run_inference.py \
-    --reference path/to/reference.png \
-    --search path/to/search.png
-```
-
----
-
-## Running Inference
-
-```bash
-python scripts/run_inference.py \
-    --reference <reference_image_path> \
-    --search <search_image_path> \
-    --output <output_path>
-```
+python scripts\evaluate_case.py --reference ".\dataset\hackathon_v3\finfet\case_0032\reference.png" --search ".\dataset\hackathon_v3\finfet\case_0032\search.png" --metadata ".\dataset\hackathon_v3\finfet\case_0032\metadata.json"
 
 The script loads the trained SNRN artifact automatically and prints the final `(x, y)` coordinate along with diagnostic values.
 
