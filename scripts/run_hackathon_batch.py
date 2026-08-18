@@ -158,8 +158,8 @@ def main():
             sys.exit(1)
         
         c = cases[0]
-        # Evaluate top 10 candidates for geometry diagnostic
-        pipeline = HybridNavigationPipeline(top_k=10)
+        # Evaluate top 20 candidates for geometry diagnostic
+        pipeline = HybridNavigationPipeline(top_k=20)
         ref_img = cv2.imread(c['ref_path'], cv2.IMREAD_GRAYSCALE)
         search_img = cv2.imread(c['search_path'], cv2.IMREAD_GRAYSCALE)
         

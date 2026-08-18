@@ -106,80 +106,25 @@ def _normalize_gspe_candidates(gspe_result, top_k=40):
 
             x, y = _candidate_center(item)
 
-            # ---------------------------------------------------------
-            # Preserve the TRUE RAW NCC.
-            #
-            # Some GSPE versions return a candidate list whose candidate
-            # dictionaries contain coordinates but do not carry the score.
-            # In that case the old handoff silently converted every score
-            # to 0.0 even though GSPE had already computed valid NCC values.
-            #
-            # Priority:
-            #   1. explicit raw_ncc/raw_score in candidate
-            #   2. GSPE raw response map sampled at candidate center
-            #   3. raw_nccs/raw_scores/ncc_scores array by index
-            #   4. generic ncc/score fields as final fallback
-            # ---------------------------------------------------------
+            # Preserve the ORIGINAL GSPE score.
             score = None
 
-            # 1) Explicit raw score stored on the candidate.
-            for key in ("raw_ncc", "raw_score"):
+            for key in (
+                "raw_ncc",
+                "raw_score",
+                "ncc",
+                "score",
+                "correlation_score",
+                "template_score",
+            ):
                 if key in item:
                     try:
                         value = float(item[key])
-                        if np.isfinite(value) and abs(value) > 1e-12:
+                        if np.isfinite(value):
                             score = value
                             break
                     except Exception:
                         pass
-
-            # 2) Reconstruct the raw NCC directly from GSPE's response
-            #    map. This is the safest handoff when candidate metadata
-            #    was generated separately from the score arrays.
-            if score is None:
-                raw_map = (
-                    gspe_result.get("res_raw")
-                    if isinstance(gspe_result, dict)
-                    else None
-                )
-                if isinstance(raw_map, np.ndarray) and raw_map.ndim >= 2:
-                    try:
-                        ix = int(round(float(x)))
-                        iy = int(round(float(y)))
-                        h_map, w_map = raw_map.shape[:2]
-                        if 0 <= ix < w_map and 0 <= iy < h_map:
-                            value = float(raw_map[iy, ix])
-                            if np.isfinite(value) and value > -0.999:
-                                score = value
-                    except Exception:
-                        pass
-
-            # 3) Explicit score arrays returned by GSPE.
-            if score is None:
-                raw_nccs = (
-                    gspe_result.get("raw_nccs")
-                    or gspe_result.get("raw_scores")
-                    or gspe_result.get("ncc_scores")
-                )
-                if (
-                    isinstance(raw_nccs, (list, tuple, np.ndarray))
-                    and i < len(raw_nccs)
-                ):
-                    value = _safe_float(raw_nccs[i], default=0.0)
-                    if np.isfinite(value):
-                        score = value
-
-            # 4) Last-resort generic candidate score fields.
-            if score is None:
-                for key in ("ncc", "score", "correlation_score", "template_score"):
-                    if key in item:
-                        try:
-                            value = float(item[key])
-                            if np.isfinite(value):
-                                score = value
-                                break
-                        except Exception:
-                            pass
 
             if score is None:
                 score = 0.0
