@@ -824,7 +824,7 @@ SilicoForge/
 ## Installation
 
 ```bash
-git clone https://github.com/<org>/SilicoForge.git
+https://github.com/marakahansika27-prog/SilicoForge#quick-start
 cd SilicoForge
 pip install -r requirements.txt
 ```
