@@ -1,0 +1,55 @@
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Model checkpoints
+*.pth
+*.pt
+*.ckpt
+
+# Official distributable model
+!models/
+!models/*.pth
+
+# Generated datasets
+dataset/hackathon/
+dataset/generated/
+dataset/hackathon_v2/
+dataset/hackathon_v3/
+dataset/hackathon_v4/
+
+# Generated outputs
+outputs/
+fresh_test/
+examples/
+
+# Generated benchmark data/results
+benchmark/results/
+benchmark/data/
+
+# Historical experimental scripts
+scripts/experimental/
+
+# Scratch/debug files
+scratch_audit.py
+scratch_verify_grad.py
+verify.py
+test_*.py
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
