@@ -821,7 +821,10 @@ SilicoForge/
 
 ---
 
-git clone https://github.com/marakahansika27-prog/SilicoForge.git
+## Installation
+
+```bash
+ git clone https://github.com/marakahansika27-prog/SilicoForge.git
 cd SilicoForge
 
 python -m venv .venv
@@ -830,6 +833,7 @@ python -m venv .venv
 pip install -r requirements.txt
 
 python scripts\evaluate_case.py --reference ".\dataset\hackathon_v3\finfet\case_0032\reference.png" --search ".\dataset\hackathon_v3\finfet\case_0032\search.png" --metadata ".\dataset\hackathon_v3\finfet\case_0032\metadata.json"
+```
 
 The script loads the trained SNRN artifact automatically and prints the final `(x, y)` coordinate along with diagnostic values.
 
