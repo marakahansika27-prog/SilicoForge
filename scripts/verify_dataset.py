@@ -1,66 +1,44 @@
 import os
 import sys
+import argparse
+import json
 import torch
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.ai_refinement.dataset import Phase1OutputSimDataset
+from src.ai_refinement.phase2_dataset import Phase2EvaluationDataset
 
-def main():
-    print("========================================")
-    print("NEW IDENTIFIABILITY TEST")
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data-dir", type=str, default="dataset/hackathon_v3",
+                        help="Path to the real Phase 2 generated dataset.")
+    return parser.parse_args()
+
+def safe_pearsonr(a, b):
+    if np.std(a) < 1e-6 or np.std(b) < 1e-6:
+        return 0.0
+    return pearsonr(a, b)[0]
+
+def run_synthetic_test():
+    print("\n========================================")
+    print("A) SYNTHETIC PHASE 1 IDENTIFIABILITY TEST")
     print("========================================")
     
     dataset_size = 100
-    print(f"Loading Phase 2 Dataset (N={dataset_size})...")
-    ds = Phase1OutputSimDataset(num_samples=dataset_size, apply_aug=False) # Disable aug to isolate pure geometry
+    ds = Phase1OutputSimDataset(num_samples=dataset_size, apply_aug=False)
     
-    samples = []
-    for i in range(dataset_size):
-        samples.append(ds[i])
-        
-    ref_patches = torch.stack([s['reference_patch'] for s in samples]).numpy() # (N, 1, 128, 128)
+    samples = [ds[i] for i in range(dataset_size)]
+    ref_patches = torch.stack([s['reference_patch'] for s in samples]).numpy()
     cand_patches = torch.stack([s['candidate_patch'] for s in samples]).numpy()
     target_deltas = torch.stack([s['target_delta'] for s in samples]).numpy()
     
     t_dx = target_deltas[:, 0]
     t_dy = target_deltas[:, 1]
     
-    print(f"Target dx: Mean = {t_dx.mean():.4f}, Std = {t_dx.std():.4f}")
-    print(f"Target dy: Mean = {t_dy.mean():.4f}, Std = {t_dy.std():.4f}")
-    
-    cand_std_across = np.std(cand_patches, axis=0).mean()
-    print(f"Candidate patch standard deviation across dataset: {cand_std_across:.6f}")
-    
-    pairwise_diffs = []
-    
-    print("Computing pairwise candidate differences...")
-    for i in range(dataset_size):
-        for j in range(i + 1, dataset_size):
-            cand_diff = np.mean(np.abs(cand_patches[i] - cand_patches[j]))
-            target_diff = np.linalg.norm(target_deltas[i] - target_deltas[j])
-            pairwise_diffs.append((cand_diff, target_diff, i, j))
-            
-    pairwise_diffs.sort(key=lambda x: x[0])
-    
-    visual_threshold = 0.02
-    target_threshold = 1.0
-    
-    print("\n10 Most Visually Similar Candidate Pairs:")
-    identifiability_broken = False
-    
-    for rank in range(10):
-        cand_diff, target_diff, i, j = pairwise_diffs[rank]
-        print(f"Rank {rank+1}: Sample {i} vs Sample {j}")
-        print(f"  Target Diff: {target_diff:.4f} px")
-        print(f"  Candidate Diff: {cand_diff:.6f}")
-        
-        if cand_diff < visual_threshold and target_diff > target_threshold:
-            identifiability_broken = True
-            
-    # Calculate Correlation
     img_diffs = cand_patches - ref_patches
     abs_diffs = np.abs(img_diffs[:, 0, :, :])
     
@@ -83,52 +61,85 @@ def main():
     rel_x_center = diff_x_center - 64.0
     rel_y_center = diff_y_center - 64.0
     
-    def safe_pearsonr(a, b):
-        if np.std(a) < 1e-6 or np.std(b) < 1e-6:
-            return 0.0
-        return pearsonr(a, b)[0]
-        
     r_x = safe_pearsonr(rel_x_center, t_dx)
     r_y = safe_pearsonr(rel_y_center, t_dy)
     
-    print(f"\nCorrelation (Image Diff X-Centroid ↔ Target dx): {r_x:.4f}")
-    print(f"Correlation (Image Diff Y-Centroid ↔ Target dy): {r_y:.4f}")
-    
-    # VISUAL VERIFICATION
-    os.makedirs("outputs/debug", exist_ok=True)
-    
-    num_vis = min(12, dataset_size)
-    fig, axes = plt.subplots(num_vis, 3, figsize=(10, 4 * num_vis))
-    fig.suptitle("Input vs Target Visually Identifiable Features", fontsize=16)
-    
-    for i in range(num_vis):
-        ax_ref = axes[i, 0]
-        ax_cand = axes[i, 1]
-        ax_diff = axes[i, 2]
-        
-        ax_ref.imshow(ref_patches[i, 0], cmap='gray')
-        ax_ref.set_title(f"Sample {i} Reference")
-        ax_ref.axis('off')
-        
-        ax_cand.imshow(cand_patches[i, 0], cmap='gray')
-        ax_cand.set_title(f"Sample {i} Candidate")
-        ax_cand.axis('off')
-        
-        ax_diff.imshow(abs_diffs[i], cmap='hot')
-        ax_diff.set_title(f"Abs Diff\ntarget_delta = ({t_dx[i]:.2f}, {t_dy[i]:.2f})")
-        ax_diff.axis('off')
-        
-    plt.tight_layout(rect=[0, 0, 1, 0.98])
-    plt.savefig("outputs/debug/input_target_grid.png")
-    plt.close()
-    
+    print(f"Correlation (Image Diff X-Centroid <-> Target dx): {r_x:.4f}")
+    print(f"Correlation (Image Diff Y-Centroid <-> Target dy): {r_y:.4f}")
+
+def run_phase2_integrity_test(data_dir):
     print("\n========================================")
-    print("SUCCESS CRITERIA")
+    print("B) REAL PHASE 2 DATASET INTEGRITY TEST")
     print("========================================")
-    if not identifiability_broken:
-        print("[PASS] INPUT-TARGET IDENTIFIABILITY RESTORED")
+    print(f"Data Dir: {data_dir}\n")
+    
+    ds = Phase2EvaluationDataset(dataset_dir=data_dir)
+    print(f"Total cases: {len(ds)}")
+    print(f"Positive cases: {ds.positive_count}")
+    print(f"Negative cases: {ds.negative_count}")
+    
+    unique_gt = set()
+    gt_xs, gt_ys = [], []
+    scales, rots = [], []
+    
+    integrity_pass = True
+    
+    for i in range(len(ds)):
+        sample = ds[i]
+        ci = sample['case_info']
+        ref_img = sample['reference_img']
+        search_img = sample['search_img']
+        
+        # Verify files and dimensions
+        if ref_img is None or search_img is None:
+            print(f"FAIL: Missing image in {ci['case_dir']}")
+            integrity_pass = False
+            continue
+            
+        if ref_img.shape != (1000, 1000) or search_img.shape != (1000, 1000):
+            print(f"FAIL: Invalid dims in {ci['case_dir']} (ref:{ref_img.shape}, search:{search_img.shape})")
+            integrity_pass = False
+            
+        if ci['case_id'] not in ci['case_dir']:
+            print(f"FAIL: Case ID {ci['case_id']} mismatches directory {ci['case_dir']}")
+            integrity_pass = False
+            
+        scales.append(ci['phase2_scale'])
+        rots.append(ci['rotation_degrees'])
+        
+        if ci['target_present']:
+            if ci['gt_x'] < 0 or ci['gt_y'] < 0:
+                print(f"FAIL: Positive case {ci['case_id']} has invalid GT ({ci['gt_x']}, {ci['gt_y']})")
+                integrity_pass = False
+            else:
+                unique_gt.add((ci['gt_x'], ci['gt_y']))
+                gt_xs.append(ci['gt_x'])
+                gt_ys.append(ci['gt_y'])
+        else:
+            if ci['gt_x'] != -1.0 or ci['gt_y'] != -1.0:
+                print(f"FAIL: Negative case {ci['case_id']} has invalid GT ({ci['gt_x']}, {ci['gt_y']})")
+                integrity_pass = False
+                
+    if len(gt_xs) > 0:
+        print(f"Unique GT coordinates: {len(unique_gt)}")
+        print(f"GT X range: {min(gt_xs):.2f} to {max(gt_xs):.2f}")
+        print(f"GT Y range: {min(gt_ys):.2f} to {max(gt_ys):.2f}")
+    if len(scales) > 0:
+        print(f"Scale range: {min(scales):.2f} to {max(scales):.2f}")
+        print(f"Rotation range: {min(rots):.2f} to {max(rots):.2f}")
+        
+    print("\nINTEGRITY STATUS: " + ("PASS" if integrity_pass else "FAIL"))
+    return integrity_pass
+
+def main():
+    args = get_args()
+    run_synthetic_test()
+    pass_phase2 = run_phase2_integrity_test(args.data_dir)
+    
+    if pass_phase2:
+        sys.exit(0)
     else:
-        print("[FAIL] INPUT-TARGET IDENTIFIABILITY STILL BROKEN")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

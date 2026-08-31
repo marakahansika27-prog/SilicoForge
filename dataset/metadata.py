@@ -41,6 +41,10 @@ class CaseMetadata:
     
     # V3 Metadata Fields
     spatial_region: Optional[str] = None
+    
+    # Phase 2 Metadata Fields
+    target_present: bool = True
+    phase2_scale: Optional[float] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

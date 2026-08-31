@@ -17,6 +17,16 @@ class Phase1OutputSimDataset(Dataset):
     Uses deterministic geometric transformations to create a mathematically
     perfect self-supervised alignment task for the AI to learn from.
     Includes HARD NEGATIVE generation and GEOMETRIC SCALE FIX.
+    
+    COORDINATE CONTRACT:
+    1. Generator base coords: Center (5000, 5000) on 10000x10000 base image.
+    2. Search image coords: Scaled by 1/10. Origin top-left.
+    3. Ground-truth coordinate (gt_coord): The CENTER of the true target in search image space (float).
+    4. GSPE candidate coord (x, y): The TOP-LEFT of the candidate bounding box in search space (integer).
+    5. classical_coord (C_0 or loc_res_w): The classical predicted CENTER of the target in search space (float).
+    6. Candidate patch: Extracted around classical_coord, scaled by 1/10 (patch size 128x128).
+    7. SNRN residual coordinate (target_delta): (gt_coord - classical_coord), bounded to < 5px.
+    8. Final output coordinate: classical_coord + predicted_residual.
     """
     def __init__(self, num_samples=10, apply_aug=True):
         self.num_samples = num_samples
@@ -93,6 +103,7 @@ class Phase1OutputSimDataset(Dataset):
             
             target_dx, target_dy = 0.0, 0.0
             classical_coord = np.array([center_x, center_y], dtype=np.float32)
+            gt_coord = np.array([-1.0, -1.0], dtype=np.float32)
             
             if is_positive:
                 gfee_res_0 = gfee.run({'reference': cond['reference_cond'], 'candidate': cand_crop})
@@ -215,7 +226,7 @@ class Phase1OutputSimDataset(Dataset):
             target_heatmap_tensor = torch.from_numpy(heatmap).unsqueeze(0)
             confidence_label_tensor = torch.tensor([conf_label], dtype=torch.float32)
             
-            return (ref_patch, cand_patch, classical_coord, np.array([0,0]), 
+            return (ref_patch, cand_patch, classical_coord, gt_coord, 
                     target_delta_tensor, target_heatmap_tensor, confidence_label_tensor, idx)
                     
         raise RuntimeError(f"Failed to generate a valid sample for index {idx} after {max_attempts} attempts.")

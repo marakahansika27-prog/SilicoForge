@@ -24,22 +24,29 @@ def main():
         optimizer = optim.Adam(model.parameters(), lr=1e-3)
         
         # Dummy batch
+        heatmap_logits = torch.zeros(
+            1, 1, 128, 128,
+            device=device,
+            requires_grad=True
+        )
+        
+        heatmap = torch.softmax(
+            heatmap_logits.view(1, -1),
+            dim=1
+        ).view(1, 1, 128, 128)
+        
         preds = {
-            'residual': torch.tensor([[1.0, -1.0]]).to(device),
-            'heatmap': (torch.ones(1, 1, 128, 128) / (128*128)).to(device),
-            'confidence': torch.tensor([[0.8]]).to(device)
+            'residual': torch.tensor([[1.0, -1.0]], device=device, requires_grad=True),
+            'heatmap_logits': heatmap_logits,
+            'heatmap': heatmap,
+            'confidence': torch.tensor([[0.8]], device=device, requires_grad=True)
         }
         
         targets = {
-            'target_delta': torch.tensor([[0.5, -0.5]]).to(device),
-            'target_heatmap': (torch.ones(1, 1, 128, 128) / (128*128)).to(device),
-            'confidence_label': torch.tensor([[1.0]]).to(device)
+            'target_delta': torch.tensor([[0.5, -0.5]], device=device),
+            'target_heatmap': (torch.ones(1, 1, 128, 128, device=device) / (128*128)),
+            'confidence_label': torch.tensor([[1.0]], device=device)
         }
-        
-        # Requires grad for preds to test backward
-        preds['residual'].requires_grad = True
-        preds['heatmap'].requires_grad = True
-        preds['confidence'].requires_grad = True
         
         loss, l_res, l_hm, l_conf = criterion(preds, targets)
         loss.backward()
@@ -54,7 +61,7 @@ def main():
         assert loss.item() > 0, "Loss should be > 0 for this dummy target"
         
         assert preds['residual'].grad is not None, "Gradients missing for residual"
-        assert preds['heatmap'].grad is not None, "Gradients missing for heatmap"
+        assert preds['heatmap_logits'].grad is not None, "Gradients missing for heatmap_logits"
         assert preds['confidence'].grad is not None, "Gradients missing for confidence"
         
         report.add_status(True, "Loss verification passed.")

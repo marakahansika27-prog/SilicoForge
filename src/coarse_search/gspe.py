@@ -15,8 +15,8 @@ class GlobalSearchProposalEngine:
         self.nms_radius = nms_radius
         
         # Geometry-aware coarse search configuration
-        self.scale_hypotheses = scale_hypotheses if scale_hypotheses is not None else [10.0]
-        self.rotation_hypotheses = rotation_hypotheses if rotation_hypotheses is not None else [0.0]
+        self.scale_hypotheses = scale_hypotheses if scale_hypotheses is not None else [8.0, 9.0, 10.0, 11.0, 12.0]
+        self.rotation_hypotheses = rotation_hypotheses if rotation_hypotheses is not None else [-5.0, 0.0, 5.0]
         
         self.stats = {}
 
@@ -42,9 +42,69 @@ class GlobalSearchProposalEngine:
             best_w_map = None
             best_h_map = None
             
-            # Geometry-aware sweep
+            # ---------------------------------------------------------
+            # COARSE SEARCH: Rank promising geometry hypotheses
+            # ---------------------------------------------------------
+            hypotheses = []
             for scale in self.scale_hypotheses:
                 for rot in self.rotation_hypotheses:
+                    hypotheses.append((scale, rot))
+                    
+            if len(hypotheses) > 3:
+                search_coarse = cv2.resize(search_img, (0,0), fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
+                ref_coarse = cv2.resize(ref_img, (0,0), fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
+                
+                coarse_scores = []
+                for scale, rot in hypotheses:
+                    c_w_ref, c_h_ref = ref_coarse.shape[1], ref_coarse.shape[0]
+                    c_M_rot = cv2.getRotationMatrix2D((c_w_ref / 2.0, c_h_ref / 2.0), rot, 1.0)
+                    
+                    c_cos_val = np.abs(c_M_rot[0, 0])
+                    c_sin_val = np.abs(c_M_rot[0, 1])
+                    c_bound_w = int((c_h_ref * c_sin_val) + (c_w_ref * c_cos_val))
+                    c_bound_h = int((c_h_ref * c_cos_val) + (c_w_ref * c_sin_val))
+                    
+                    c_M_rot[0, 2] += (c_bound_w / 2) - (c_w_ref / 2)
+                    c_M_rot[1, 2] += (c_bound_h / 2) - (c_h_ref / 2)
+                    
+                    c_ref_rotated = cv2.warpAffine(ref_coarse, c_M_rot, (c_bound_w, c_bound_h), flags=cv2.INTER_LINEAR)
+                                                 
+                    c_theta = np.deg2rad(np.abs(rot))
+                    c_crop_w = int(c_w_ref / (np.sin(c_theta) + np.cos(c_theta)))
+                    c_crop_h = int(c_h_ref / (np.sin(c_theta) + np.cos(c_theta)))
+                    
+                    c_cx_rot, c_cy_rot = c_bound_w // 2, c_bound_h // 2
+                    c_y1 = max(0, c_cy_rot - c_crop_h // 2)
+                    c_y2 = c_y1 + c_crop_h
+                    c_x1 = max(0, c_cx_rot - c_crop_w // 2)
+                    c_x2 = c_x1 + c_crop_w
+                    
+                    c_ref_rotated_cropped = c_ref_rotated[c_y1:c_y2, c_x1:c_x2]
+                    
+                    c_scaled_bound_w = int(round(c_crop_w / scale))
+                    c_scaled_bound_h = int(round(c_crop_h / scale))
+                    
+                    if c_scaled_bound_w <= search_coarse.shape[1] and c_scaled_bound_h <= search_coarse.shape[0]:
+                        c_ref_scaled = cv2.resize(c_ref_rotated_cropped, (c_scaled_bound_w, c_scaled_bound_h), interpolation=cv2.INTER_AREA)
+                        c_res = cv2.matchTemplate(search_coarse, c_ref_scaled, cv2.TM_CCOEFF_NORMED)
+                        _, c_max_val, _, _ = cv2.minMaxLoc(c_res)
+                        coarse_scores.append(c_max_val)
+                    else:
+                        coarse_scores.append(-1.0)
+                        
+                sorted_hypotheses = [x for _, x in sorted(zip(coarse_scores, hypotheses), reverse=True)]
+                final_hypotheses = sorted_hypotheses[:3]
+                best_coarse_geom = sorted_hypotheses[0]
+                coarse_data = sorted(zip(coarse_scores, hypotheses), reverse=True)
+            else:
+                final_hypotheses = hypotheses
+                best_coarse_geom = hypotheses[0]
+                coarse_data = [(0.0, h) for h in hypotheses]
+                
+            # ---------------------------------------------------------
+            # FULL RESOLUTION: Evaluate Top-3 hypotheses
+            # ---------------------------------------------------------
+            for scale, rot in final_hypotheses:
                     
                     # Compute transformed template size in search image space
                     # The scaling factor maps reference pixels to search pixels.
@@ -101,7 +161,9 @@ class GlobalSearchProposalEngine:
                     res_lowfreq = cv2.matchTemplate(search_blurred, ref_blurred, cv2.TM_CCOEFF_NORMED)
                     
                     # 5. Hybrid Score
-                    res = 0.5 * res_raw + 0.5 * res_lowfreq
+                    # Use a heavily weighted high-frequency score (0.9 raw + 0.1 lowfreq)
+                    # to prevent macro-periodic low-frequency structures from overwhelming local distinctness
+                    res = 0.9 * res_raw + 0.1 * res_lowfreq
                     
                     # Since template size varies, the output response map size varies slightly.
                     # We pad the response map so it has the same size (search_h, search_w) 
@@ -154,12 +216,14 @@ class GlobalSearchProposalEngine:
             best_overall_rot = best_rot_map[max_loc_hyb[1], max_loc_hyb[0]]
             
             print("\n--- GSPE HYBRID DIAGNOSTIC ---")
-            print(f"Hypotheses Evaluated    : {len(self.scale_hypotheses) * len(self.rotation_hypotheses)}")
+            print(f"Coarse hypotheses evaluated   : {len(self.scale_hypotheses) * len(self.rotation_hypotheses)}")
+            print(f"Full-resolution evaluated     : {len(final_hypotheses)}")
             print(f"Raw NCC Top-1 Score     : {max_val_raw:.4f}")
             print(f"LowFreq NCC Top-1 Score : {max_val_low:.4f}")
             print(f"Hybrid Top-1 Score      : {max_val_hyb:.4f}")
             print(f"Hybrid Top-1 Center     : {max_loc_hyb}")
-            print(f"Top-1 Geometry          : Scale {best_overall_scale:.3f}, Rot {best_overall_rot:.3f}")
+            print(f"Best coarse geometry    : Scale {best_coarse_geom[0]:.3f}, Rot {best_coarse_geom[1]:.3f}")
+            print(f"Best final geometry     : Scale {best_overall_scale:.3f}, Rot {best_overall_rot:.3f}")
             
             # Add to stats for telemetry
             self.stats['hybrid_top1_score'] = float(max_val_hyb)
@@ -245,10 +309,17 @@ class GlobalSearchProposalEngine:
                 
                 boxes.append((tl_x, tl_y, int(w_cand), int(h_cand), scale_cand, rot_cand))
                 
-                # Suppress this region
-                nms_r = int(nms_radius)
-                y1, y2 = max(0, y - nms_r), min(res_nms.shape[0], y + nms_r)
-                x1, x2 = max(0, x - nms_r), min(res_nms.shape[1], x + nms_r)
+                # Use geometry-aware NMS if a fixed radius is not provided or too small
+                if self.nms_radius is None:
+                    # Suppress an area proportional to the template size (e.g. 1/4th of the template)
+                    nms_r_x = max(10, int(w_cand / 4.0))
+                    nms_r_y = max(10, int(h_cand / 4.0))
+                else:
+                    nms_r_x = int(self.nms_radius)
+                    nms_r_y = int(self.nms_radius)
+                    
+                y1, y2 = max(0, y - nms_r_y), min(res_nms.shape[0], y + nms_r_y)
+                x1, x2 = max(0, x - nms_r_x), min(res_nms.shape[1], x + nms_r_x)
                 res_nms[y1:y2, x1:x2] = -1.0
                 
             print(f"Top-{self.top_k} Hybrid Candidates Extracted:")
@@ -273,8 +344,10 @@ class GlobalSearchProposalEngine:
             'res_raw': res_raw,
             'res_lowfreq': res_lowfreq,
             'res_hybrid': res,
+            'res_nms': res_nms, # Post-NMS map
             'best_scale_map': best_scale_map,
             'best_rot_map': best_rot_map,
             'best_w_map': best_w_map,
-            'best_h_map': best_h_map
+            'best_h_map': best_h_map,
+            'coarse_hypotheses': coarse_data
         }
