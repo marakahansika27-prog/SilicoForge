@@ -93,7 +93,7 @@ class GlobalSearchProposalEngine:
                         coarse_scores.append(-1.0)
                         
                 sorted_hypotheses = [x for _, x in sorted(zip(coarse_scores, hypotheses), reverse=True)]
-                final_hypotheses = sorted_hypotheses[:3]
+                final_hypotheses = sorted_hypotheses[:5]
                 best_coarse_geom = sorted_hypotheses[0]
                 coarse_data = sorted(zip(coarse_scores, hypotheses), reverse=True)
             else:
@@ -304,8 +304,8 @@ class GlobalSearchProposalEngine:
                 # We return the top-left coordinate as per convention (sub_x - w/2, sub_y - h/2)
                 # But since the sub_x, sub_y are now explicitly the CENTER coordinate (due to centering border),
                 # the top-left representation is:
-                tl_x = sub_x - (w_cand / 2.0)
-                tl_y = sub_y - (h_cand / 2.0)
+                tl_x = sub_x - float(w_cand // 2)
+                tl_y = sub_y - float(h_cand // 2)
                 
                 boxes.append((tl_x, tl_y, int(w_cand), int(h_cand), scale_cand, rot_cand))
                 
