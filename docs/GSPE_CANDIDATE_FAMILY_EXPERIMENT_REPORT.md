@@ -30,6 +30,6 @@ C. Does candidate-family retention actually recover the GT when it was already p
 D. How many failures are still caused by geometry? 18
 E. How many remain fundamentally ambiguous? 19
 F. What is the new mean localization error? 119.39 px
-G. What is the runtime impact? Average GSPE runtime is 589.87 ms per case.
+G. What is the runtime impact? Average GSPE runtime is 552.12 ms per case.
 
 NO PRODUCTION CODE WAS MODIFIED.

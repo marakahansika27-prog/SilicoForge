@@ -2,4 +2,4 @@
 
 ## BOTTLENECK DIAGNOSIS
 **Dominant Bottleneck:** GSPE
-GSPE Mean: 120.07 px | Classical Mean: inf px
+GSPE Mean: 196.22 px | Classical Mean: 199.34 px
