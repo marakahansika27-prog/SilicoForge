@@ -1,4 +1,4 @@
-SilicoForge
+﻿SilicoForge
 
 Hybrid Sub-Pixel Localization for Semiconductor Pattern Images
 
@@ -38,147 +38,218 @@ DRAM
 
 FinFET
 
-Table of Contents
+## Table of Contents
+
+- [Project Identity](#project-identity)
+- [Team](#team)
+- [Project Evolution](#project-evolution)
+- [Phase 1](#phase-1)
+  - [Phase 1 Problem Definition](#phase-1-problem-definition)
+  - [Phase 1 Objectives](#phase-1-objectives)
+  - [Phase 1 Architecture](#phase-1-architecture)
+  - [Phase 1 Pipeline](#phase-1-pipeline)
+  - [Phase 1 Image Conditioning](#phase-1-image-conditioning)
+  - [Phase 1 Global Search](#phase-1-global-search)
+  - [Phase 1 Candidate Localization](#phase-1-candidate-localization)
+  - [Phase 1 Sub-Pixel Localization](#phase-1-sub-pixel-localization)
+  - [Phase 1 SNRN](#phase-1-snrn)
+  - [Phase 1 Decision Fusion](#phase-1-decision-fusion)
+  - [Phase 1 Dataset Generation](#phase-1-dataset-generation)
+  - [Phase 1 Training](#phase-1-training)
+  - [Phase 1 Evaluation](#phase-1-evaluation)
+  - [Phase 1 Final Benchmark](#phase-1-final-benchmark)
+  - [Phase 1 Lessons Learned](#phase-1-lessons-learned)
+- [Phase 2](#phase-2)
+  - [Phase 2 Problem Definition](#phase-2-problem-definition)
+  - [Phase 2 Official Dataset Structure](#phase-2-official-dataset-structure)
+  - [Phase 2 Scoring Structure](#phase-2-scoring-structure)
+  - [Phase 2 Engineering Changes](#phase-2-engineering-changes)
+  - [Phase 2 Architecture](#phase-2-architecture)
+  - [Phase 2 Image Conditioning](#phase-2-image-conditioning)
+  - [Phase 2 GSPE](#phase-2-gspe)
+  - [Phase 2 Candidate Diversity](#phase-2-candidate-diversity)
+  - [Phase 2 Candidate Verification](#phase-2-candidate-verification)
+  - [Phase 2 Pose Recovery](#phase-2-pose-recovery)
+  - [Phase 2 Sub-Pixel Refinement](#phase-2-sub-pixel-refinement)
+  - [Phase 2 AI Refinement](#phase-2-ai-refinement)
+  - [Phase 2 Rejection](#phase-2-rejection)
+  - [Phase 2 Confidence](#phase-2-confidence)
+  - [Phase 2 Output Contract](#phase-2-output-contract)
+  - [Phase 2 Runtime](#phase-2-runtime)
+  - [Phase 2 Local Validation](#phase-2-local-validation)
+  - [Phase 2 Failure Analysis](#phase-2-failure-analysis)
+  - [Phase 2 RGB Handling](#phase-2-rgb-handling)
+  - [Phase 2 Submission Package](#phase-2-submission-package)
+- [Production Entry Point](#production-entry-point)
+- [Repository Structure](#repository-structure)
+- [Core Modules](#core-modules)
+- [Dataset Generator](#dataset-generator)
+- [Model Artifact](#model-artifact)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Phase 1 Quick Start](#phase-1-quick-start)
+- [Phase 2 Quick Start](#phase-2-quick-start)
+- [Evaluator Workflow](#evaluator-workflow)
+- [Input Specification](#input-specification)
+- [Output Specification](#output-specification)
+- [Coordinate Convention](#coordinate-convention)
+- [Training Workflow](#training-workflow)
+- [Evaluation Workflow](#evaluation-workflow)
+- [Ground-Truth Leakage Prevention](#ground-truth-leakage-prevention)
+- [Reproducibility](#reproducibility)
+- [Performance](#performance)
+- [Known Limitations](#known-limitations)
+- [Design Decisions](#design-decisions)
+- [Why Hybrid CV + AI](#why-hybrid-cv--ai)
+- [Periodic Ambiguity](#periodic-ambiguity)
+- [Candidate Recall](#candidate-recall)
+- [Confidence and Rejection](#confidence-and-rejection)
+- [Submission Safety](#submission-safety)
+- [Troubleshooting](#troubleshooting)
+- [Documentation](#documentation)
+- [References](#references)
+- [Project Status](#project-status)
+- [License](#license)
 
-Project Identity
+## Project Identity
 
-Team
+## Team
 
-Project Evolution
+## Project Evolution
 
-Phase 1
+## Phase 1
 
-Phase 1 Problem Definition
+### Phase 1 Problem Definition
 
-Phase 1 Objectives
+### Phase 1 Objectives
 
-Phase 1 Architecture
+### Phase 1 Architecture
 
-Phase 1 Pipeline
+### Phase 1 Pipeline
 
-Phase 1 Image Conditioning
+### Phase 1 Image Conditioning
 
-Phase 1 Global Search
+### Phase 1 Global Search
 
-Phase 1 Candidate Localization
+### Phase 1 Candidate Localization
 
-Phase 1 Sub-Pixel Localization
+### Phase 1 Sub-Pixel Localization
 
-Phase 1 SNRN
+### Phase 1 SNRN
 
-Phase 1 Decision Fusion
+### Phase 1 Decision Fusion
 
-Phase 1 Dataset Generation
+### Phase 1 Dataset Generation
 
-Phase 1 Training
+### Phase 1 Training
 
-Phase 1 Evaluation
+### Phase 1 Evaluation
 
-Phase 1 Final Benchmark
+### Phase 1 Final Benchmark
 
-Phase 1 Lessons Learned
+### Phase 1 Lessons Learned
 
-Phase 2
+## Phase 2
 
-Phase 2 Problem Definition
+### Phase 2 Problem Definition
 
-Phase 2 Official Dataset Structure
+### Phase 2 Official Dataset Structure
 
-Phase 2 Scoring Structure
+### Phase 2 Scoring Structure
 
-Phase 2 Engineering Changes
+### Phase 2 Engineering Changes
 
-Phase 2 Architecture
+### Phase 2 Architecture
 
-Phase 2 Image Conditioning
+### Phase 2 Image Conditioning
 
-Phase 2 GSPE
+### Phase 2 GSPE
 
-Phase 2 Candidate Diversity
+### Phase 2 Candidate Diversity
 
-Phase 2 Candidate Verification
+### Phase 2 Candidate Verification
 
-Phase 2 Pose Recovery
+### Phase 2 Pose Recovery
 
-Phase 2 Sub-Pixel Refinement
+### Phase 2 Sub-Pixel Refinement
 
-Phase 2 AI Refinement
+### Phase 2 AI Refinement
 
-Phase 2 Rejection
+### Phase 2 Rejection
 
-Phase 2 Confidence
+### Phase 2 Confidence
 
-Phase 2 Output Contract
+### Phase 2 Output Contract
 
-Phase 2 Runtime
+### Phase 2 Runtime
 
-Phase 2 Local Validation
+### Phase 2 Local Validation
 
-Phase 2 Failure Analysis
+### Phase 2 Failure Analysis
 
-Phase 2 RGB Handling
+### Phase 2 RGB Handling
 
-Phase 2 Submission Package
+### Phase 2 Submission Package
 
-Production Entry Point
+## Production Entry Point
 
-Repository Structure
+## Repository Structure
 
-Core Modules
+## Core Modules
 
-Dataset Generator
+## Dataset Generator
 
-Model Artifact
+## Model Artifact
 
-Requirements
+## Requirements
 
-Installation
+## Installation
 
-Phase 1 Quick Start
+## Phase 1 Quick Start
 
-Phase 2 Quick Start
+## Phase 2 Quick Start
 
-Evaluator Workflow
+## Evaluator Workflow
 
-Input Specification
+## Input Specification
 
-Output Specification
+## Output Specification
 
-Coordinate Convention
+## Coordinate Convention
 
-Training Workflow
+## Training Workflow
 
-Evaluation Workflow
+## Evaluation Workflow
 
-Ground-Truth Leakage Prevention
+## Ground-Truth Leakage Prevention
 
-Reproducibility
+## Reproducibility
 
-Performance
+## Performance
 
-Known Limitations
+## Known Limitations
 
-Design Decisions
+## Design Decisions
 
-Why Hybrid CV + AI
+## Why Hybrid CV + AI
 
-Periodic Ambiguity
+## Periodic Ambiguity
 
-Candidate Recall
+## Candidate Recall
 
-Confidence and Rejection
+## Confidence and Rejection
 
-Submission Safety
+## Submission Safety
 
-Troubleshooting
+## Troubleshooting
 
-Documentation
+## Documentation
 
-References
+## References
 
-Project Status
+## Project Status
 
-License
+## License
 
 Project Identity
 
