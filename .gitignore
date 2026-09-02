@@ -84,3 +84,8 @@ src/coarse_search/gspe_*_BACKUP.py
 src/coarse_search/gspe_backup_*.py
 src/integration/pipeline_backup_v2_ai_*_BASELINE.py
 src/integration/pipeline_backup_v2_ai_*_BACKUP.py
+
+# Python virtual environments
+.venv/
+.venv311/
+venv/

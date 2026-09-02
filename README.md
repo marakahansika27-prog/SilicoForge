@@ -1,241 +1,435 @@
-# SilicoForge
-## Hybrid Sub-Pixel Localization for Semiconductor Pattern Images
+SilicoForge
+
+Hybrid Sub-Pixel Localization for Semiconductor Pattern Images
+
 SilicoForge is a hybrid computer-vision and deep-learning framework for locating semiconductor layout patterns inside larger search images.
-The project is organized around two engineering phases.
-**Phase 1** established the core localization pipeline under a constrained/known pose assumption.
-**Phase 2** extends the same foundation to unknown scale, unknown rotation, degraded images, absent targets, pose recovery, confidence-aware rejection, and CPU-only evaluator execution.
-The public project name is **SilicoForge**.
-The working project name used during development was **Drift-Sense V2**.
-The target semiconductor pattern families include **DRAM** and **FinFET**.
-The core philosophy is:
-```text
-Classical Computer Vision
-        +
-Learned Residual Refinement
-        +
-Confidence-Aware Decision Making
-        =
-Robust Semiconductor Pattern Localization
-```
----
-# Table of Contents
-- [Project Identity](#project-identity)
-- [Project Evolution](#project-evolution)
-- [Phase 1](#phase-1)
-- [Phase 1 Problem Definition](#phase-1-problem-definition)
-- [Phase 1 Objectives](#phase-1-objectives)
-- [Phase 1 Architecture](#phase-1-architecture)
-- [Phase 1 Pipeline](#phase-1-pipeline)
-- [Phase 1 Image Conditioning](#phase-1-image-conditioning)
-- [Phase 1 Global Search](#phase-1-global-search)
-- [Phase 1 Candidate Localization](#phase-1-candidate-localization)
-- [Phase 1 Sub-Pixel Localization](#phase-1-sub-pixel-localization)
-- [Phase 1 SNRN](#phase-1-snrn)
-- [Phase 1 Decision Fusion](#phase-1-decision-fusion)
-- [Phase 1 Dataset Generation](#phase-1-dataset-generation)
-- [Phase 1 Training](#phase-1-training)
-- [Phase 1 Evaluation](#phase-1-evaluation)
-- [Phase 1 Final Benchmark](#phase-1-final-benchmark)
-- [Phase 1 Lessons Learned](#phase-1-lessons-learned)
-- [Phase 2](#phase-2)
-- [Phase 2 Problem Definition](#phase-2-problem-definition)
-- [Phase 2 Official Dataset Structure](#phase-2-official-dataset-structure)
-- [Phase 2 Scoring Structure](#phase-2-scoring-structure)
-- [Phase 2 Engineering Changes](#phase-2-engineering-changes)
-- [Phase 2 Architecture](#phase-2-architecture)
-- [Phase 2 Image Conditioning](#phase-2-image-conditioning)
-- [Phase 2 GSPE](#phase-2-gspe)
-- [Phase 2 Candidate Diversity](#phase-2-candidate-diversity)
-- [Phase 2 Candidate Verification](#phase-2-candidate-verification)
-- [Phase 2 Pose Recovery](#phase-2-pose-recovery)
-- [Phase 2 Sub-Pixel Refinement](#phase-2-sub-pixel-refinement)
-- [Phase 2 AI Refinement](#phase-2-ai-refinement)
-- [Phase 2 Rejection](#phase-2-rejection)
-- [Phase 2 Confidence](#phase-2-confidence)
-- [Phase 2 Output Contract](#phase-2-output-contract)
-- [Phase 2 Runtime](#phase-2-runtime)
-- [Phase 2 Local Validation](#phase-2-local-validation)
-- [Phase 2 Failure Analysis](#phase-2-failure-analysis)
-- [Phase 2 RGB Handling](#phase-2-rgb-handling)
-- [Phase 2 Submission Package](#phase-2-submission-package)
-- [Production Entry Point](#production-entry-point)
-- [Repository Structure](#repository-structure)
-- [Core Modules](#core-modules)
-- [Dataset Generator](#dataset-generator)
-- [Model Artifact](#model-artifact)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Phase 1 Quick Start](#phase-1-quick-start)
-- [Phase 2 Quick Start](#phase-2-quick-start)
-- [Evaluator Workflow](#evaluator-workflow)
-- [Input Specification](#input-specification)
-- [Output Specification](#output-specification)
-- [Coordinate Convention](#coordinate-convention)
-- [Training Workflow](#training-workflow)
-- [Evaluation Workflow](#evaluation-workflow)
-- [Ground-Truth Leakage Prevention](#ground-truth-leakage-prevention)
-- [Reproducibility](#reproducibility)
-- [Performance](#performance)
-- [Known Limitations](#known-limitations)
-- [Design Decisions](#design-decisions)
-- [Why Hybrid CV + AI](#why-hybrid-cv--ai)
-- [Periodic Ambiguity](#periodic-ambiguity)
-- [Candidate Recall](#candidate-recall)
-- [Confidence and Rejection](#confidence-and-rejection)
-- [Submission Safety](#submission-safety)
-- [Troubleshooting](#troubleshooting)
-- [Documentation](#documentation)
-- [References](#references)
-- [Project Status](#project-status)
-- [License](#license)
----
-# Project Identity
-| Item | Value |
-|---|---|
-| Public project name | SilicoForge |
-| Working project name | Drift-Sense V2 |
-| Domain | Semiconductor image localization |
-| Pattern families | DRAM and FinFET |
-| Primary task | Locate a reference pattern in a search image |
-| Phase 1 output | `(x, y)` |
-| Phase 2 output | `(x, y, theta, scale, found, score)` |
-| Core approach | Hybrid classical CV + learned residual refinement |
-| Global search | GSPE |
-| Conditioning | ICE |
-| AI refinement | SNRN |
-| Final decision | Confidence-aware fusion |
-| Production entry point | `register.py` |
-| Model artifact | `best_model.pth` |
-| Execution target | CPU-only |
-| Network requirement | None during inference |
-| Current milestone | Phase 2 submission engineering |
----
-# Project Evolution
-SilicoForge was not created as a single monolithic model.
-The project evolved through a sequence of controlled engineering stages.
-The first stage concentrated on deterministic localization.
-The second stage introduced learned residual refinement.
-The next stage concentrated on reproducibility.
-The project then moved to candidate-search diagnostics.
-The diagnostics identified periodic ambiguity as a major failure mode.
-The project was subsequently selected for Phase 2.
-Phase 2 changes the task from constrained localization to registration under unknown pose.
-The system therefore retains the proven Phase 1 foundation while expanding the search and decision layers.
-The evolution can be summarized as:
-```text
+
+The project combines:
+
+deterministic image conditioning,
+
+correlation-based global search,
+
+multi-scale and multi-rotation hypothesis generation,
+
+spatially diverse candidate retention,
+
+full-resolution verification,
+
+sub-pixel localization,
+
+learned residual refinement,
+
+confidence-aware decision making,
+
+and explicit target rejection.
+
+The project evolved through two major phases:
+
+Phase 1: constrained-pose semiconductor pattern localization.
+
+Phase 2: registration under unknown pose, including scale, rotation, degraded images, absent targets, pose recovery, rejection, and evaluator-facing CPU execution.
+
+The public project name is SilicoForge. The working development name used during implementation was Drift-Sense V2.
+
+Target semiconductor pattern families include:
+
+DRAM
+
+FinFET
+
+Table of Contents
+
+Project Identity
+
+Team
+
+Project Evolution
+
 Phase 1
-Known / constrained pose
-        |
-        v
-ICE
-        |
-        v
+
+Phase 1 Problem Definition
+
+Phase 1 Objectives
+
+Phase 1 Architecture
+
+Phase 1 Pipeline
+
+Phase 1 Image Conditioning
+
+Phase 1 Global Search
+
+Phase 1 Candidate Localization
+
+Phase 1 Sub-Pixel Localization
+
+Phase 1 SNRN
+
+Phase 1 Decision Fusion
+
+Phase 1 Dataset Generation
+
+Phase 1 Training
+
+Phase 1 Evaluation
+
+Phase 1 Final Benchmark
+
+Phase 1 Lessons Learned
+
+Phase 2
+
+Phase 2 Problem Definition
+
+Phase 2 Official Dataset Structure
+
+Phase 2 Scoring Structure
+
+Phase 2 Engineering Changes
+
+Phase 2 Architecture
+
+Phase 2 Image Conditioning
+
+Phase 2 GSPE
+
+Phase 2 Candidate Diversity
+
+Phase 2 Candidate Verification
+
+Phase 2 Pose Recovery
+
+Phase 2 Sub-Pixel Refinement
+
+Phase 2 AI Refinement
+
+Phase 2 Rejection
+
+Phase 2 Confidence
+
+Phase 2 Output Contract
+
+Phase 2 Runtime
+
+Phase 2 Local Validation
+
+Phase 2 Failure Analysis
+
+Phase 2 RGB Handling
+
+Phase 2 Submission Package
+
+Production Entry Point
+
+Repository Structure
+
+Core Modules
+
+Dataset Generator
+
+Model Artifact
+
+Requirements
+
+Installation
+
+Phase 1 Quick Start
+
+Phase 2 Quick Start
+
+Evaluator Workflow
+
+Input Specification
+
+Output Specification
+
+Coordinate Convention
+
+Training Workflow
+
+Evaluation Workflow
+
+Ground-Truth Leakage Prevention
+
+Reproducibility
+
+Performance
+
+Known Limitations
+
+Design Decisions
+
+Why Hybrid CV + AI
+
+Periodic Ambiguity
+
+Candidate Recall
+
+Confidence and Rejection
+
+Submission Safety
+
+Troubleshooting
+
+Documentation
+
+References
+
+Project Status
+
+License
+
+Project Identity
+
+Item
+
+Value
+
+Public project name
+
+SilicoForge
+
+Working development name
+
+Drift-Sense V2
+
+Domain
+
+Semiconductor image localization
+
+Pattern families
+
+DRAM and FinFET
+
+Primary task
+
+Locate a reference pattern in a larger search image
+
+Phase 1 output
+
+(x, y)
+
+Phase 2 output
+
+(x, y, theta, scale, found, score)
+
+Global search
+
 GSPE
+
+Image conditioning
+
+ICE
+
+Learned refinement
+
+SNRN
+
+Production entry point
+
+register.py
+
+Model artifact
+
+models/best_model.pth
+
+Execution target
+
+CPU-only
+
+Network during inference
+
+Not required
+
+Current milestone
+
+Phase 2 submission engineering
+
+Team
+
+Team SilicoForge
+
+Member
+
+Year
+
+Maraka Hansika
+
+III Year
+
+C.H. Lakshmi Varshitha
+
+III Year
+
+K. Rohith Reddy
+
+III Year
+
+R. Jahnavi
+
+III Year
+
+Institution: B V Raju Institute of Technology, Narsapur
+
+Project Evolution
+
+SilicoForge was developed as a layered localization system rather than as a single end-to-end black-box predictor.
+
+The engineering progression was:
+
+Constrained localization
+        |
+        v
+Image conditioning
+        |
+        v
+Global correlation search
         |
         v
 Sub-pixel localization
         |
         v
-SNRN residual correction
+Learned residual refinement
         |
         v
 Decision fusion
         |
         v
+Phase 1 localization
+        |
+        v
+Phase 2 unknown-pose registration
+        |
+        v
+Scale + rotation search
+        |
+        v
+Candidate diversity
+        |
+        v
+Pose recovery + rejection
+        |
+        v
+Evaluator-facing production pipeline
+
+The central design principle is to let classical computer vision perform broad spatial reasoning and let the learned model perform a small, local residual correction.
+
+This keeps the neural model's task narrow and interpretable.
+
+Phase 1
+
+Phase 1 established the core localization framework.
+
+The original task assumed a constrained pose and concentrated on accurate spatial localization of a semiconductor reference pattern inside a larger search image.
+
+The final Phase 1 output was a sub-pixel coordinate:
+
 (x, y)
-```
-Phase 2 extends this to:
-```text
-Phase 2
-Unknown pose + possible absence
-        |
-        v
-ICE
-        |
-        v
-Multi-scale / multi-rotation GSPE
-        |
-        v
-Multiple spatial candidates
-        |
-        v
-Candidate verification
-        |
-        v
-(x, y, theta, scale)
-        |
-        v
-Local / AI refinement
-        |
-        v
-Presence / rejection
-        |
-        v
-Confidence-aware decision
-        |
-        v
-(x, y, theta, scale, found, score)
-```
----
-# Phase 1
-Phase 1 established the original localization framework.
-The target was a known semiconductor pattern inside a larger search image.
-The original setting used a constrained pose.
-The original production path assumed a fixed scale near 10x.
-The original pipeline concentrated on accurate spatial localization.
-The final Phase 1 result was a sub-pixel `(x, y)` coordinate.
-Phase 1 also established the use of learned residual refinement.
-The AI model was not intended to replace global search.
-Instead, the neural component learned a local residual.
-This design reduced the burden placed on the neural model.
-The classical pipeline first narrowed the search.
-The neural stage then operated near a candidate.
-The final fusion stage decided whether the refinement should be trusted.
----
-# Phase 1 Problem Definition
-The Phase 1 problem can be expressed as:
-```text
-Input:
-    reference image
-    search image
-Output:
-    center x
-    center y
-```
-The reference image contains the pattern to locate.
-The search image contains the larger scene.
-The target location is represented in search-image coordinates.
-The system must estimate the center rather than only a bounding-box corner.
-The system must support fractional-pixel coordinates.
-The system must not use ground-truth coordinates during inference.
-The ground truth is reserved for dataset generation and evaluation.
----
-# Phase 1 Objectives
-Phase 1 had five major objectives.
-## Objective 1: Global localization
-Find a plausible region containing the reference.
-## Objective 2: Fine localization
-Improve the coordinate beyond the coarse search resolution.
-## Objective 3: Residual correction
+
+Phase 1 also established the separation between:
+
+global localization,
+
+local precision refinement,
+
+learned residual correction,
+
+and final decision fusion.
+
+The neural network was not designed to replace global search.
+
+Instead:
+
+Global CV search
+      |
+      v
+Candidate
+      |
+      v
+Local precision
+      |
+      v
+Small learned residual
+
+Phase 1 Problem Definition
+
+Given:
+
+Reference image
+Search image
+
+the system estimates:
+
+Center x
+Center y
+
+The coordinate is expressed in search-image coordinates.
+
+The reference image contains the semiconductor pattern to locate.
+
+The search image contains the larger scene in which that pattern occurs.
+
+The system must estimate the center rather than only a template corner.
+
+Fractional-pixel coordinates are supported by the refinement stage.
+
+Ground-truth coordinates are not required by inference.
+
+Ground truth is used only for:
+
+dataset generation,
+
+training labels,
+
+and evaluation.
+
+Phase 1 Objectives
+
+Objective 1: Global Localization
+
+Find a plausible region containing the reference pattern.
+
+Objective 2: Fine Localization
+
+Improve the coarse coordinate to sub-pixel precision.
+
+Objective 3: Residual Correction
+
 Use SNRN to predict a small coordinate correction.
-## Objective 4: Confidence-aware refinement
-Avoid blindly replacing a strong classical estimate with a weak learned estimate.
-## Objective 5: Reproducibility
-Provide code, model weights, dataset generation, dependency specification, and verification support.
----
-# Phase 1 Architecture
-The Phase 1 architecture is:
-```text
+
+Objective 4: Confidence-Aware Refinement
+
+Avoid blindly replacing a strong classical estimate with an unreliable learned estimate.
+
+Objective 5: Reproducibility
+
+Provide:
+
+source code,
+
+model weights,
+
+dataset generation,
+
+dependency specification,
+
+evaluator interface,
+
+and documentation.
+
+Phase 1 Architecture
+
 Reference Image
        |
        v
-Image Conditioning Engine
+Image Conditioning Engine (ICE)
        |
        v
 Search Image
        |
        v
-Global Search Proposal Engine
+Global Search Proposal Engine (GSPE)
        |
        v
 Candidate Localization
@@ -243,26 +437,27 @@ Candidate Localization
        v
 Sub-Pixel Peak Estimation
        |
-       +-------------------+
-       |                   |
-       v                   v
-Classical Coordinate   SNRN Residual
-       |                   |
-       |                 (dx, dy)
-       |                   |
-       +---------+---------+
-                 |
-                 v
-        Confidence-Aware
-          Decision Fusion
-                 |
-                 v
-             Final (x,y)
-```
----
-# Phase 1 Pipeline
-The Phase 1 workflow is:
-```text
+       +-----------------------+
+       |                       |
+       v                       v
+Classical Coordinate      SNRN Residual
+                               |
+                               v
+                         (dx, dy)
+       |                       |
+       +-----------+-----------+
+                   |
+                   v
+          Confidence-Aware
+             Decision Fusion
+                   |
+                   v
+               Final (x,y)
+
+Phase 1 Pipeline
+
+The Phase 1 production concept is:
+
 1. Load reference
 2. Load search image
 3. Condition image pair
@@ -270,477 +465,424 @@ The Phase 1 workflow is:
 5. Compute correlation responses
 6. Extract candidate peaks
 7. Select candidate
-8. Refine the peak
+8. Refine peak
 9. Prepare AI input
 10. Predict residual
 11. Estimate confidence
 12. Fuse classical and AI results
 13. Return final coordinate
-```
----
-# Phase 1 Image Conditioning
+
+The separation between broad search and local refinement is intentional.
+
+It avoids applying expensive fine processing to the entire search image.
+
+Phase 1 Image Conditioning
+
 The Image Conditioning Engine is abbreviated as ICE.
-Its purpose is to reduce irrelevant imaging variation.
-The module operates before global matching.
-The conditioning stage attempts to preserve structural information.
-The stage can normalize intensity behavior.
 
-It can reduce sensitivity to image variation.
+Implementation:
 
-It is implemented in:
-
-```text
 src/preprocessing/ice.py
-```
 
-The conditioning stage is intentionally separated from global search.
+ICE is placed before global matching.
 
-This separation makes diagnostics easier.
+Its purpose is to reduce nuisance variation while preserving the structural information required for localization.
 
-It also makes the processing pipeline modular.
+The conditioning stage is kept separate from GSPE so that:
 
----
+preprocessing can be tested independently,
 
-# Phase 1 Global Search
+global search can be diagnosed independently,
+
+and the overall pipeline remains modular.
+
+Phase 1 Global Search
 
 The Global Search Proposal Engine is abbreviated as GSPE.
 
+Implementation:
+
+src/coarse_search/gspe.py
+
 GSPE performs the broad localization stage.
 
-The Phase 1 setting was based on a constrained pose.
+The search is based on correlation responses derived from image similarity.
 
-The global search therefore concentrated on finding the target spatially.
+Normalized cross-correlation concepts provide a spatial response surface.
 
-The response surface is derived from image similarity.
+High-response regions become candidate locations.
 
-The implementation is:
+The important property is that the response surface remains spatially interpretable.
 
-```text
-src/coarse_search/gspe.py
-```
-
-The project uses normalized cross-correlation concepts.
-
-The correlation surface provides a spatially interpretable response.
-
-High response regions are treated as candidate locations.
-
----
-
-# Phase 1 Candidate Localization
+Phase 1 Candidate Localization
 
 After global search, the response surface contains candidate peaks.
 
-The highest candidate is not automatically guaranteed to be correct.
+The highest peak is not guaranteed to be the correct target.
 
-This became an important lesson during later diagnostics.
+This became an important engineering lesson because semiconductor layout patterns can be highly repetitive.
 
-Repeated semiconductor patterns can produce multiple high responses.
+Repeated structures can create several visually similar peaks.
 
-Candidate selection therefore became a major engineering concern.
-
-The selected candidate is passed to local refinement.
+The selected candidate is therefore passed to local refinement.
 
 The candidate coordinate is represented in search-image coordinates.
 
----
-
-# Phase 1 Sub-Pixel Localization
+Phase 1 Sub-Pixel Localization
 
 The system refines an integer candidate using the local correlation surface.
 
-The conceptual sequence is:
+Conceptually:
 
-```text
 Integer peak
-     |
-     v
+    |
+    v
 Local response neighborhood
-     |
-     v
+    |
+    v
 Sub-pixel interpolation
-     |
-     v
+    |
+    v
 Fractional coordinate
-```
 
-The result can contain fractional values.
+The resulting coordinate may contain fractional values such as:
 
-For example:
-
-```text
 (817.7891, 676.1043)
-```
 
-The exact values depend on the image pair.
+The exact value depends on the image pair.
 
-Sub-pixel estimation is performed after candidate localization.
+Sub-pixel estimation is performed only after candidate localization.
 
-This ordering avoids applying expensive fine refinement to the entire image.
+Phase 1 SNRN
 
----
+SNRN stands for Subpixel Navigation Refinement Network.
 
-# Phase 1 SNRN
+It is the learned refinement component.
 
-SNRN means Subpixel Navigation Refinement Network.
+The network predicts a small residual:
 
-SNRN is the learned refinement component.
-
-The network predicts a small residual.
-
-The residual is represented as:
-
-```text
 (dx, dy)
-```
 
 The refined coordinate can be expressed as:
 
-```text
 x_final = x_classical + dx
 y_final = y_classical + dy
-```
 
-The model is located under:
+Relevant implementation area:
 
-```text
 src/ai_refinement/
-```
 
-Relevant modules include:
+Relevant components include:
 
-```text
 network.py
 inference.py
 dataset.py
 augmentations.py
 loss.py
 trainer.py
-```
 
-The model artifact is stored under:
+The trained model artifact is:
 
-```text
 models/best_model.pth
-```
 
----
+The model is used as a local refinement component rather than as the global search engine.
 
-# Phase 1 Decision Fusion
+Phase 1 Decision Fusion
 
-Decision fusion prevents the AI output from automatically overriding the classical coordinate.
+Decision fusion prevents the AI estimate from automatically overriding the classical estimate.
 
-The classical result provides the primary localization signal.
+The classical localization provides the primary spatial signal.
 
-The AI result provides residual correction.
+The AI model provides a residual correction.
 
-Confidence is used to determine whether the refinement should be trusted.
+The system evaluates whether the learned correction should be trusted.
 
-The conceptual design is:
+Conceptually:
 
-```text
 Classical coordinate
         |
-        +--------+
-                 |
-AI residual ---->|
-AI confidence -->| Decision Fusion
-                 |
-                 v
-           Final coordinate
-```
+        +------------------+
+                           |
+AI residual -------------->|
+                           | Decision Fusion
+AI confidence ------------>|
+                           |
+                           v
+                    Final coordinate
 
-This design was selected for interpretability and safety.
+This design was chosen for interpretability and safety.
 
----
+Phase 1 Dataset Generation
 
-# Phase 1 Dataset Generation
+The project contains a standalone dataset generator:
 
-The project includes a standalone generator.
-
-The main public generator is:
-
-```text
 generate_dataset.py
-```
 
-The generator supports semiconductor pattern families.
+The generator supports the principal semiconductor pattern families:
 
-The principal supported architectures are:
-
-```text
 DRAM
 FinFET
-```
 
-Generated pairs contain reference and search images.
+Generated pairs contain:
 
-Ground-truth metadata is generated for evaluation.
+reference images,
 
-The generator is separate from inference.
+search images,
 
-This separation helps prevent ground-truth leakage.
+and ground-truth metadata used for evaluation.
 
----
+Dataset generation is separated from inference.
 
-# Phase 1 Training
+This separation helps prevent accidental use of ground-truth coordinates during registration.
 
-Training is provided under the project scripts.
+Phase 1 Training
 
-The training workflow uses synthetic data.
+Training uses synthetic data and is separate from evaluator inference.
 
-The AI component is trained for residual refinement.
+The AI component is trained for residual coordinate refinement.
 
-Training is distinct from evaluator inference.
+The training process produces a PyTorch checkpoint.
 
-The model checkpoint is saved as a PyTorch artifact.
+The public repository includes the trained production model artifact.
 
-The public repository includes the trained model artifact.
+Training should not be required for ordinary evaluator inference.
 
----
-
-# Phase 1 Evaluation
+Phase 1 Evaluation
 
 Phase 1 evaluation compares predicted coordinates with recorded ground truth.
 
-Evaluation metrics include:
+Typical metrics include:
 
-```text
-mean error
-median error
+Mean error
+Median error
 RMSE
-threshold success
-duplicate checks
-missing-case checks
-```
+Threshold success
+Duplicate checks
+Missing-case checks
 
-Evaluation also verifies data integrity.
+Evaluation also checks data integrity.
 
 Ground-truth coordinates are not supplied to the inference pipeline.
 
----
+Phase 1 Final Benchmark
 
-# Phase 1 Final Benchmark
+The historical Phase 1 benchmark contained:
 
-The final recorded Phase 1 benchmark contained:
-
-```text
 60 total cases
 30 DRAM
 30 FinFET
-```
 
-The final recorded Phase 1 success was:
+Recorded result:
 
-```text
 40 / 60
 = 66.7%
-```
 
-The recorded mean error was:
+Recorded mean error:
 
-```text
 65.78 px
-```
 
-The recorded median error was:
+Recorded median error:
 
-```text
 1.10 px
-```
 
-The recorded RMSE was:
+Recorded RMSE:
 
-```text
 134.53 px
-```
 
-The benchmark integrity checks passed.
+The benchmark included integrity checks for:
 
-There were no duplicate cases.
+duplicate cases,
 
-There were no missing cases.
+missing cases,
 
-Ground-truth leakage was not observed.
+and ground-truth leakage.
 
-These figures belong to the historical Phase 1 benchmark.
+These numbers are historical Phase 1 results.
 
-They are not Phase 2 leaderboard results.
+They are not official Phase 2 leaderboard results.
 
----
-
-# Phase 1 Lessons Learned
+Phase 1 Lessons Learned
 
 Phase 1 demonstrated that strong local accuracy can coexist with large catastrophic errors.
 
-The median error was much smaller than the mean error.
+The much smaller median error compared with the mean indicated a distribution containing both accurate predictions and severe failures.
 
-This indicates a distribution containing both successful and severe failures.
+The most important lesson was periodic ambiguity.
 
-Periodic structures were a major source of ambiguity.
+Repeated semiconductor structures can produce:
 
-A global argmax can select a visually similar but incorrect repeated structure.
+Correct high peak
+        +
+Incorrect high peak
+        +
+Other visually similar peaks
 
-Candidate recall is therefore fundamental.
+A single global argmax can therefore select the wrong repeated structure.
 
-If the correct candidate is absent from the candidate pool, later refinement cannot recover it.
+This led directly to the Phase 2 focus on candidate recall and spatial diversity.
 
-This motivated the Phase 2 candidate-diversity strategy.
+Phase 2
 
----
+Phase 2 extends the system to registration under unknown pose.
 
-# Phase 2
+The Phase 2 problem introduces:
 
-Phase 2 is the registration-under-unknown-pose extension.
+unknown scale,
 
-The Phase 2 system continues the Phase 1 hybrid philosophy.
+unknown rotation,
 
-The major difference is that pose is no longer assumed to be fixed.
+degraded images,
 
-The target may also be absent.
+possible target absence,
 
-The evaluator therefore expects both localization and rejection behavior.
+pose recovery,
 
-Phase 2 additionally requires scale and rotation recovery.
+explicit rejection,
 
-Confidence becomes an explicit scoring dimension.
+confidence,
 
-Runtime becomes a strict engineering constraint.
+and strict CPU runtime requirements.
 
----
+The Phase 2 architecture retains the proven Phase 1 hybrid philosophy while expanding the search and decision layers.
 
-# Phase 2 Problem Definition
+Phase 2 Problem Definition
 
-The Phase 2 task can be summarized as:
-
-```text
 Given:
-    reference semiconductor pattern
-    larger search image
 
-Unknown:
-    target position
-    scale
-    rotation
-    possible presence / absence
+Reference semiconductor pattern
+Larger search image
 
-Return:
-    x
-    y
-    theta
-    scale
-    found
-    score
-```
+the system must determine:
 
-The search must handle approximately:
+Target position
+Target rotation
+Target scale
+Target presence / absence
 
-```text
-scale:    8x to 12x
-rotation: -5 degrees to +5 degrees
-```
+and return:
 
-The system must also handle degraded image conditions.
+x
+y
+theta
+scale
+found
+score
 
-These include noise, blur, brightness variation, and repetitive structures.
+The disclosed search range is approximately:
 
----
+Scale:    8 to 12
+Rotation: -5 to +5 degrees
 
-# Phase 2 Official Dataset Structure
+The system must also handle degraded image conditions and repetitive structures.
 
-The official Phase 2 composition discussed for evaluation is:
+Phase 2 Official Dataset Structure
 
-```text
+The organizer-defined Phase 2 composition is:
+
 Set A: 70 nominal present pairs
 Set B: 70 degraded present pairs
 Set C: 40 absent pairs
 Set D: 20 RGB optical bonus pairs
-```
 
-The total is:
+Total:
 
-```text
 70 + 70 + 40 + 20 = 200 pairs
-```
 
-Sets A, B, and C are the core grayscale evaluation groups.
+Sets A, B, and C form the core grayscale evaluation groups.
 
 Set D is an optical/RGB bonus group.
 
 The local V4 benchmark used during engineering is not identical to this official composition.
 
----
-
-# Phase 2 Scoring Structure
+Phase 2 Scoring Structure
 
 The Phase 2 base scoring dimensions are:
 
-```text
-Localization       40 points
-Pose recovery      20 points
-Rejection          15 points
-Confidence          10 points
-Efficiency           5 points
-Documentation      10 points
-```
+Dimension
 
-The base total is:
+Points
 
-```text
-100 points
-```
+Localization
 
-A possible bonus can add up to:
+40
 
-```text
+Pose
+
+20
+
+Rejection
+
+15
+
+Confidence
+
+10
+
+Efficiency
+
+5
+
+Documentation
+
+10
+
+Base total
+
+100
+
+A possible bonus adds up to:
+
 10 points
-```
 
-The bonus includes an optical credit component and a rejection F1 component.
+The bonus includes:
 
-The official evaluation therefore rewards more than coordinate accuracy.
+optical credit,
 
----
+and a rejection F1 component.
 
-# Phase 2 Engineering Changes
+The evaluation therefore rewards more than raw coordinate accuracy.
 
-Phase 2 required several changes.
+Phase 2 Engineering Changes
 
-The first change was explicit scale search.
+Phase 2 introduced or strengthened the following capabilities:
 
-The second change was explicit rotation search.
+Explicit scale search.
 
-The third change was candidate diversity.
+Explicit rotation search.
 
-The fourth change was periodic ambiguity handling.
+Multiple spatial candidates.
 
-The fifth change was absent-target rejection.
+Candidate verification.
 
-The sixth change was pose output.
+Pose recovery.
 
-The seventh change was confidence-aware decision making.
+Absent-target rejection.
 
-The eighth change was Phase-2-style data generation.
+Confidence-aware decision making.
 
-The ninth change was CPU optimization.
+Phase-2-style dataset generation.
 
-The tenth change was the evaluator-facing `register.py` interface.
+CPU-oriented execution.
 
----
+Evaluator-facing register.py.
 
-# Phase 2 Architecture
+The implementation keeps the global-search and local-refinement stages separate.
 
-The production Phase 2 path is:
+Phase 2 Architecture
 
-```text
+The production path is:
+
 Reference + Search
         |
         v
-ICE
+       ICE
         |
         v
-GSPE
-multi-scale / multi-rotation
+       GSPE
+        |
+        +--> Multi-scale hypotheses
+        |
+        +--> Multi-rotation hypotheses
         |
         v
 Top-K spatial candidates
@@ -755,73 +897,64 @@ Full-resolution NCC
 Sub-pixel refinement
         |
         v
-SNRN / local refinement
+SNRN / AI refinement
         |
         v
 Decision Fusion
         |
-        +------------+
-        |            |
-        v            v
-    FOUND          REJECT
-        |            |
-        +------+- ----+
-               |
-               v
+        +----------------+
+        |                |
+        v                v
+      FOUND           REJECT
+        |                |
+        +-------+--------+
+                |
+                v
 (x, y, theta, scale, found, score)
-```
 
----
-
-# Phase 2 Image Conditioning
+Phase 2 Image Conditioning
 
 ICE remains part of the Phase 2 production path.
 
-The reason is unchanged.
+The reason is unchanged:
 
-Global search should operate on conditioned inputs.
+Condition input
+      |
+      v
+Reduce nuisance variation
+      |
+      v
+Run pose-aware global search
 
-The conditioning stage reduces nuisance variation.
+Keeping conditioning separate from search makes the system easier to diagnose and maintain.
 
-The Phase 2 search then operates over pose hypotheses.
+Phase 2 GSPE
 
-This preserves the architectural separation between conditioning and search.
+GSPE becomes the major broad-search engine for Phase 2.
 
----
+Instead of assuming one fixed geometry, the system evaluates multiple scale and rotation hypotheses.
 
-# Phase 2 GSPE
+The scale range is approximately:
 
-GSPE becomes the major Phase 2 search engine.
+8
+9
+10
+11
+12
 
-Instead of relying on one fixed geometry, it evaluates multiple scale and rotation hypotheses.
+The rotation range is approximately:
 
-The target scale range is approximately:
-
-```text
-8x
-9x
-10x
-11x
-12x
-```
-
-The target rotation range is approximately:
-
-```text
 -5 degrees
 ...
-0 degrees
+ 0 degrees
 ...
 +5 degrees
-```
 
-The actual implementation can evaluate a defined set of hypotheses.
+The exact evaluated hypothesis set is an implementation detail.
 
-The global search therefore becomes a coarse pose-aware search.
+The key design change is that global search becomes pose-aware.
 
----
-
-# Phase 2 Candidate Diversity
+Phase 2 Candidate Diversity
 
 Candidate diversity is critical because semiconductor structures are repetitive.
 
@@ -829,321 +962,1316 @@ A single global maximum can be misleading.
 
 The system therefore retains multiple spatially distinct candidates.
 
-The purpose is not to return multiple final predictions.
+The purpose is not to output multiple final predictions.
 
 The purpose is to preserve alternatives for downstream verification.
 
-The production GSPE configuration can evaluate multiple coarse hypotheses.
+The production GSPE configuration evaluates multiple coarse hypotheses and retains a Top-K candidate set.
 
-The pipeline then retains a Top-K candidate set.
+Spatial separation is used to avoid filling the candidate set with near-duplicate peaks.
 
-Spatial separation is used to avoid returning near-duplicate peaks.
+Phase 2 Candidate Verification
 
----
+Candidate verification happens after broad search.
 
-# Phase 2 Candidate Verification
+Expensive precision processing is not applied to every possible location.
 
-Candidate verification happens after global search.
+Instead:
 
-The expensive precision stages should not run over every possible location.
+Global search
+    |
+    v
+Shortlist
+    |
+    v
+High-resolution verification
 
-Instead, the shortlisted candidates are evaluated.
+Candidate geometry includes:
 
-Verification uses higher-resolution information.
-
-The candidate geometry includes:
-
-```text
 x
 y
 scale
 rotation
-```
 
-The candidate score is derived from correlation-based evidence.
+Verification uses correlation-based evidence at higher resolution.
 
-The system can also compare supporting local evidence.
+Phase 2 Pose Recovery
 
----
+Phase 2 output includes:
 
-# Phase 2 Pose Recovery
-
-Phase 2 requires the recovered pose.
-
-The output includes:
-
-```text
 theta
 scale
-```
 
-The convention is:
+The rotation convention is:
 
-```text
-theta = rotation of the reference as it appears in the wide search image
-```
+theta = rotation of the reference as it appears
+        in the wide-search image
 
 Positive rotation is counter-clockwise.
 
 Scale represents the recovered down-scaling factor.
 
-The nominal scale interval is approximately 8 to 12.
+The nominal search interval is approximately:
 
----
+8 to 12
 
-# Phase 2 Sub-Pixel Refinement
+Phase 2 Sub-Pixel Refinement
 
-After a candidate is selected, the system performs high-resolution localization.
+After candidate selection, the system performs local high-resolution localization.
 
-Full-resolution NCC is used for local verification.
+The process is:
 
-The response peak is then refined.
+Selected candidate
+       |
+       v
+Full-resolution NCC
+       |
+       v
+Local peak
+       |
+       v
+Sub-pixel refinement
+       |
+       v
+Fractional x,y
 
-The result can contain fractional coordinates.
+The final coordinate remains in wide-search coordinates.
 
-The output remains in wide-search coordinates.
+The output represents the center of the located reference pattern.
 
-The final center is therefore not simply a top-left template coordinate.
+Phase 2 AI Refinement
 
----
-# Phase 2 Evaluator Command
+The learned refinement stage remains local.
 
-The authoritative Phase 2 evaluator-facing command is:
+The design is:
 
-```bash
-python register.py --input pairs.csv --output predictions.csv
-```
+Classical candidate
+        |
+        v
+Sub-pixel coordinate
+        |
+        +------> SNRN
+                  |
+                  v
+              (dx, dy)
+                  |
+                  v
+          Decision Fusion
 
-The required CSV header is:
+The neural model is not responsible for discovering the target over the entire search image.
 
-```text
-pair_id,x,y,theta,scale,found,score
-```
+This limits the learned component to a smaller residual-correction problem.
 
-The evaluator should run the command from the repository root.
+Phase 2 Rejection
 
----
+Phase 2 requires explicit handling of absent targets.
 
-# Phase 2 Python Environment
+The production entry point uses a fixed GSPE rejection threshold:
 
-The validated Phase 2 environment uses Python 3.11.
+GSPE_REJECTION_THRESHOLD = 0.85
 
-The intended execution environment is CPU-only.
+The decision logic is:
 
-No GPU is required.
+score >= 0.85
+        |
+        v
+     found = 1
 
-No network connection is required during inference.
+score < 0.85
+        |
+        v
+     found = 0
 
-The dependency versions are specified in `requirements.txt`.
+When a target is rejected, pose fields are zeroed in the evaluator output.
 
----
+This produces a contract-safe representation:
 
-# Installation
-
-Create or activate a Python 3.11 environment before running the project.
-
-```bash
-python --version
-```
-
-Install the repository dependencies with:
-
-```bash
-pip install -r requirements.txt
-```
-
-Verify the dependency installation with:
-
-```bash
-pip check
-```
-
-The validated Phase 2 environment is CPU-only. No GPU or network connection is required during inference.
-
----
-
-# Phase 1 Quick Start
-
-Phase 1 is the completed constrained-pose localization foundation of SilicoForge.
-
-The Phase 1 workflow is documented through the image conditioning, global search, candidate localization, sub-pixel localization, SNRN refinement, decision fusion, dataset generation, training, and evaluation sections of this README.
-
-The Phase 1 processing flow is:
-
-```text
-Reference Image
-      |
-      v
-Image Conditioning
-      |
-      v
-Global Search
-      |
-      v
-Candidate Localization
-      |
-      v
-Sub-Pixel Refinement
-      |
-      v
-Learned Residual Refinement
-      |
-      v
-Final Localization
-```
-
-Phase 1 established the core localization architecture that Phase 2 extends.
-
-The Phase 1 benchmark results documented in this repository are historical project results. They must not be interpreted as official Phase 2 evaluation results.
-
----
-
-# Phase 2 Quick Start
-
-Phase 2 is the current production registration path.
-
-## 1. Prepare the environment
-
-Use Python 3.11 and install the pinned repository dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-## 2. Prepare the input
-
-From the repository root, prepare the evaluator input CSV according to the documented input specification.
-
-Keep every supplied `pair_id` unchanged.
-
-## 3. Run registration
-
-Use the production entry point:
-
-```bash
-python register.py --input pairs.csv --output predictions.csv
-```
-
-## 4. Check the output
-
-The required output header is:
-
-```text
-pair_id,x,y,theta,scale,found,score
-```
-
-There must be exactly one output row for every input pair.
-
-For a detected target:
-
-```text
-found = 1
-```
-
-and `x`, `y`, `theta`, and `scale` contain the recovered result.
-
-For a rejected or absent target:
-
-```text
 found = 0
 x = 0
 y = 0
 theta = 0
 scale = 0
-```
 
-The `score` field remains the system's internal confidence value.
+The score is retained.
 
-## 5. Production execution path
+Phase 2 Confidence
 
-```text
-register.py
-    |
-    v
-Phase 2 integration pipeline
-    |
-    +--> ICE
-    |
-    +--> GSPE global search
-    |
-    +--> Full-resolution NCC verification
-    |
-    +--> Sub-pixel refinement
-    |
-    +--> SNRN / AI refinement
-    |
-    +--> Decision fusion
-    |
-    v
-predictions.csv
-```
+The score field is the system's evaluator-facing confidence value.
 
-## 6. Execution model
+It is intended to be monotonic with match confidence rather than to represent a calibrated probability.
 
-```text
+An internal AI/refinement confidence may also be used during decision fusion.
+
+These values should not be confused:
+
+Internal refinement confidence
+            !=
+Evaluator-facing score
+
+For example, a local engineering demo produced an internal confidence near 0.9987 while the final GSPE/evaluator-facing score was approximately 0.9422.
+
+That example is a demonstration of the distinction, not an official benchmark result.
+
+Phase 2 Output Contract
+
+The production output header is exactly:
+
+pair_id,x,y,theta,scale,found,score
+
+One row is required for every input pair.
+
+For a detected target:
+
+found = 1
+x, y, theta, scale = recovered values
+
+For a rejected or absent target:
+
+found = 0
+x = 0
+y = 0
+theta = 0
+scale = 0
+
+The pair_id must remain exactly as supplied by the evaluator.
+
+Phase 2 Runtime
+
+The target evaluator environment is CPU-only.
+
+The project is validated with:
+
 Python 3.11
-CPU-only execution
+CPU execution
 No GPU required
 No network required during inference
-```
 
-## 7. Evaluation note
+The organizer runtime requirement is:
 
-The local V4 benchmark documented in this repository is an engineering validation benchmark. It is not the organizer's official Phase 2 blind evaluation.
+Median <= 5 seconds per pair
+Hard timeout = 20 seconds per pair
 
-The official Phase 2 evaluation uses the organizer-defined Set A, Set B, Set C, and Set D composition described later in this README.
+A 200-pair local Python 3.11 production run completed in:
 
----
+278.0669 seconds total
 
-# Official Versus Local Evaluation
+Average:
 
-The official Phase 2 evaluation is performed on organizer-generated blind data.
+approximately 1.39 seconds per pair
 
-The local V4 benchmark is an engineering validation benchmark.
+This is a local engineering measurement.
 
-The local V4 benchmark is **not the official Phase 2 evaluation**.
+It should not be presented as the organizer's official runtime measurement.
 
-Its measurements are included to document implementation behavior, runtime, rejection, and failure modes.
+Phase 2 Local Validation
 
-They must not be interpreted as organizer leaderboard results.
+The local V4 benchmark used during engineering contained:
 
----
+200 total cases
+100 present
+100 absent
+50 DRAM present
+50 DRAM absent
+50 FinFET present
+50 FinFET absent
 
-# Phase 2 Required Dataset Groups
+It was a balanced synthetic engineering benchmark.
 
-The official Phase 2 composition is:
+It is not the official A/B/C/D composition.
 
-```text
-Set A: 70 nominal present
-Set B: 70 degraded present
-Set C: 40 absent
-Set D: 20 RGB optical bonus
-```
+The final production threshold test produced:
 
-Sets A, B, and C form the core grayscale evaluation.
+TP = 98
+FN = 2
+FP = 0
+TN = 100
 
-Set D is the optical/RGB bonus group.
+Derived rejection metrics:
 
-The production registration path currently converts input images to grayscale.
+Precision = 1.0000
+Recall    = 0.9800
+F1        = 0.9899
 
-Therefore the system does not claim to exploit RGB color information for Set D.
+For present cases that were found, local coordinate results were:
 
----
+Mean error   = 114.5358 px
+Median error = 58.4594 px
+Maximum      = 399.935 px
 
-# Final README Verification
+Threshold percentages:
 
-This README documents both project phases.
+Within 1 px  = 35.71%
+Within 2 px  = 44.90%
+Within 3 px  = 45.92%
+Within 5 px  = 46.94%
+Within 10 px = 46.94%
+Within 50 px = 48.98%
 
-Phase 1 describes the completed constrained-pose localization foundation.
+These measurements are local engineering evidence only.
 
-Phase 2 describes the unknown-pose registration extension.
+They are not official Phase 2 leaderboard results.
 
-The repository-level production interface is explicitly documented.
+Phase 2 Failure Analysis
 
-The output contract is explicitly documented.
+The principal observed failure modes are:
 
-The model artifact is explicitly documented.
+1. Periodic aliasing
 
-The Python 3.11 CPU environment is explicitly documented.
+Repeated layout structures can produce strong incorrect correlation peaks.
 
-Local validation is explicitly separated from official evaluation.
+2. Top-1 selection failure
+
+The correct candidate can exist in the search response while an incorrect repeated structure ranks first.
+
+3. Candidate generation failure
+
+If the correct target is not retained in the candidate set, later refinement cannot recover it.
+
+4. Rejection false negatives
+
+A present target can occasionally fall below the fixed rejection threshold.
+
+5. AI refinement limitation
+
+A local learned residual cannot repair a globally incorrect candidate.
+
+The resulting engineering conclusion was:
+
+Candidate recall is relatively strong.
+Candidate selection remains the primary localization weakness.
+
+No unvalidated reranking rule is enabled in the frozen production path.
+
+Phase 2 RGB Handling
+
+The Phase 2 input loader explicitly reads images in grayscale.
+
+The production path therefore accepts RGB image files but converts them to grayscale during ingestion.
+
+This means:
+
+RGB file input
+      |
+      v
+Grayscale processing
+
+The system does not claim to exploit color information.
+
+Therefore:
+
+RGB files are ingestible,
+
+color channels are discarded,
+
+no color-specific feature is claimed,
+
+and no official Set D bonus result is claimed.
+
+Set D performance must be measured using the organizer's official optical dataset before making any bonus claim.
+
+Phase 2 Submission Package
+
+The Phase 2 submission package contains the required evaluator-facing artifacts.
+
+Required files:
+
+register.py
+requirements.txt
+generate_dataset.py
+failure_analysis.pdf
+best_model.pth
+
+The production model is included inside the submission package.
+
+The evaluator-facing repository also contains documentation and source modules required by the implementation.
+
+The official submission ZIP should not contain:
+
+.venv/
+local datasets/
+temporary outputs/
+debug artifacts/
+temporary evaluation scripts/
+
+Production Entry Point
+
+The authoritative production entry point is:
+
+register.py
+
+Run:
+
+python register.py --input pairs.csv --output predictions.csv
+
+The command-line interface is intentionally simple:
+
+usage: register.py [-h] --input INPUT --output OUTPUT
+
+The entry point:
+
+reads the supplied pair CSV,
+
+loads the reference and search images,
+
+runs the Phase 2 registration pipeline,
+
+applies the production rejection logic,
+
+writes one prediction row per pair.
+
+Repository Structure
+
+A simplified repository structure is:
+
+SilicoForge/
+|
++-- register.py
++-- requirements.txt
++-- generate_dataset.py
++-- failure_analysis.pdf
++-- README.md
+|
++-- models/
+|   +-- best_model.pth
+|
++-- src/
+    |
+    +-- preprocessing/
+    |   +-- ice.py
+    |
+    +-- coarse_search/
+    |   +-- gspe.py
+    |
+    +-- ai_refinement/
+    |   +-- network.py
+    |   +-- inference.py
+    |   +-- dataset.py
+    |   +-- augmentations.py
+    |   +-- loss.py
+    |   +-- trainer.py
+    |
+    +-- integration/
+    |   +-- pipeline_backup_v2_ai.py
+    |
+    +-- utils/
+
+Additional source files and directories are retained in the repository for training, evaluation, utilities, and development support.
+
+Core Modules
+
+ICE
+
+src/preprocessing/ice.py
+
+Handles image conditioning before global matching.
+
+GSPE
+
+src/coarse_search/gspe.py
+
+Performs broad correlation-based candidate generation.
+
+SNRN
+
+src/ai_refinement/
+
+Provides learned local residual refinement.
+
+Integration Pipeline
+
+src/integration/pipeline_backup_v2_ai.py
+
+Contains the integrated production path used by the evaluator-facing entry point.
+
+Register
+
+register.py
+
+Provides the final evaluator-facing interface and output contract.
+
+Dataset Generator
+
+The public generator is:
+
+generate_dataset.py
+
+Its role is dataset creation, not evaluator inference.
+
+The generator supports the project's semiconductor pattern families, including:
+
+DRAM
+FinFET
+
+The generated data can contain:
+
+reference images,
+
+search images,
+
+transformed targets,
+
+and ground-truth metadata.
+
+The inference path must not use the generated ground-truth coordinates.
+
+Model Artifact
+
+The production model is:
+
+models/best_model.pth
+
+The model is a PyTorch checkpoint.
+
+It is loaded by the production pipeline when AI refinement is enabled.
+
+Inference is CPU-compatible.
+
+The repository contains the model artifact so that evaluator execution does not require network access or external model downloads.
+
+Requirements
+
+Dependencies are pinned in:
+
+requirements.txt
+
+The validated environment uses Python 3.11.
+
+Important validated packages include:
+
+numpy==2.4.6
+scipy==1.17.1
+opencv-python==5.0.0.93
+pandas==3.0.5
+scikit-image==0.26.0
+torch==2.13.0
+torchvision==0.28.0
+tifffile==2026.3.3
+
+The dependency file is the authoritative source for the complete package list.
+
+After installation, verify with:
+
+python -m pip check
+
+Expected:
+
+No broken requirements found.
+
+Installation
+
+SilicoForge Phase 2 is validated for Python 3.11 and CPU-only execution.
+
+1. Clone the Phase 2 Repository
+
+Clone the Phase 2 branch directly:
+
+git clone -b phase2-development https://github.com/marakahansika27-prog/SilicoForge.git SilicoForge-Phase2
+cd SilicoForge-Phase2
+
+This explicitly checks out the phase2-development branch.
+
+If a local repository already exists, do not clone into the existing non-empty directory.
+
+2. Create a Python 3.11 Environment
+
+Windows PowerShell:
+
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+Verify:
+
+python --version
+
+Expected:
+
+Python 3.11.x
+
+Linux/macOS:
+
+python3.11 -m venv .venv
+source .venv/bin/activate
+python --version
+
+3. Install Dependencies
+
+python -m pip install -r requirements.txt
+
+4. Verify Dependencies
+
+python -m pip check
+
+Expected:
+
+No broken requirements found.
+
+5. Verify the Entry Point
+
+python register.py --help
+
+6. Verify the Model
+
+The production model should exist at:
+
+models/best_model.pth
+
+7. Run Registration
+
+python register.py --input pairs.csv --output predictions.csv
+
+Phase 1 Quick Start
+
+Phase 1 is the completed constrained-pose localization foundation.
+
+The processing concept is:
+
+Reference
+   |
+   v
+ICE
+   |
+   v
+GSPE
+   |
+   v
+Candidate
+   |
+   v
+Sub-pixel refinement
+   |
+   v
+SNRN residual
+   |
+   v
+Decision fusion
+   |
+   v
+(x, y)
+
+Phase 1 benchmark numbers in this README are historical project measurements.
+
+They should not be interpreted as Phase 2 results.
+
+Phase 2 Quick Start
+
+1. Clone
+
+git clone -b phase2-development https://github.com/marakahansika27-prog/SilicoForge.git SilicoForge-Phase2
+cd SilicoForge-Phase2
+
+2. Create Environment
+
+Windows:
+
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+3. Install
+
+python -m pip install -r requirements.txt
+
+4. Verify
+
+python -m pip check
+
+5. Run
+
+python register.py --input pairs.csv --output predictions.csv
+
+6. Output
+
+pair_id,x,y,theta,scale,found,score
+
+Exactly one row must be produced per input pair.
+
+Evaluator Workflow
+
+The evaluator workflow is:
+
+Evaluator pair CSV
+        |
+        v
+register.py
+        |
+        v
+Load reference/search
+        |
+        v
+ICE
+        |
+        v
+GSPE
+        |
+        v
+Candidate verification
+        |
+        v
+Sub-pixel + AI refinement
+        |
+        v
+Decision / rejection
+        |
+        v
+predictions.csv
+
+The evaluator should execute the command from the repository root.
+
+No network access should be required during inference.
+
+Input Specification
+
+The production command accepts:
+
+--input pairs.csv
+
+The input CSV contains the evaluator-supplied pair identifiers and image paths.
+
+The supplied pair_id must be preserved exactly.
+
+A simple development example is:
+
+pair_id,reference,search
+example_001,path/to/reference.png,path/to/search.png
+
+The exact organizer input schema should always take precedence over local development examples.
+
+Output Specification
+
+The output CSV header is exactly:
+
+pair_id,x,y,theta,scale,found,score
+
+For a found target:
+
+example_001,652.07,161.02,0.0,10.0,1,0.94
+
+For a rejected target:
+
+example_002,0,0,0,0,0,0.42
+
+Rules:
+
+preserve every pair_id,
+
+output exactly one row per input pair,
+
+use wide-search coordinates,
+
+output floating-point x and y,
+
+output rotation in degrees,
+
+output the recovered scale,
+
+use found=1 for accepted matches,
+
+use found=0 for rejected/absent targets,
+
+zero pose fields when found=0.
+
+Coordinate Convention
+
+Coordinates are expressed in the wide search image.
+
+The output position represents the center of the located reference pattern.
+
+The rotation convention is:
+
+theta = rotation of the reference as it appears
+        in the wide-search image
+
+Positive rotation is counter-clockwise.
+
+Scale is the recovered down-scaling factor.
+
+The nominal Phase 2 range is:
+
+8 to 12
+
+Training Workflow
+
+Training is separate from evaluator inference.
+
+A conceptual training workflow is:
+
+Generate synthetic data
+        |
+        v
+Create reference/search pairs
+        |
+        v
+Compute residual labels
+        |
+        v
+Train SNRN
+        |
+        v
+Validate
+        |
+        v
+Save checkpoint
+
+The resulting checkpoint is used during inference.
+
+Training is not required for ordinary evaluator execution when the supplied model artifact is available.
+
+Evaluation Workflow
+
+A local evaluation workflow is:
+
+Generate / prepare benchmark
+        |
+        v
+Create input CSV
+        |
+        v
+Run register.py
+        |
+        v
+Read predictions
+        |
+        v
+Compare against ground truth
+        |
+        v
+Calculate metrics
+        |
+        v
+Inspect failure modes
+
+Evaluation should distinguish:
+
+Found present target
+Rejected present target
+Correctly rejected absent target
+False positive absent target
+
+Localization error should only be computed for present cases that were accepted as found.
+
+Ground-Truth Leakage Prevention
+
+Ground truth is reserved for:
+
+dataset generation,
+
+training labels,
+
+and evaluation.
+
+The production inference path should not receive:
+
+ground-truth x
+ground-truth y
+ground-truth theta
+ground-truth scale
+
+as input.
+
+The inference path must determine the result from the supplied reference and search images.
+
+This separation is an important reproducibility and benchmark-integrity requirement.
+
+Reproducibility
+
+For a clean reproducibility check:
+
+git clone -b phase2-development https://github.com/marakahansika27-prog/SilicoForge.git SilicoForge-Phase2
+cd SilicoForge-Phase2
+
+Create the environment:
+
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+Install:
+
+python -m pip install -r requirements.txt
+
+Verify:
+
+python -m pip check
+
+Verify the production interface:
+
+python register.py --help
+
+Then run the evaluator command:
+
+python register.py --input pairs.csv --output predictions.csv
+
+A clean-clone engineering test has been performed successfully with the Phase 2 branch.
+
+The test verified:
+
+repository clone,
+
+Python 3.11 environment,
+
+dependency installation,
+
+importability,
+
+model availability,
+
+production CLI,
+
+actual image-pair processing,
+
+and valid output CSV generation.
+
+Performance
+
+The system is designed around a staged architecture:
+
+Cheap broad search
+       |
+       v
+Small candidate set
+       |
+       v
+Expensive local verification
+       |
+       v
+Small AI refinement
+
+This avoids applying full-resolution and AI processing across the entire search image.
+
+A local Python 3.11 CPU run over 200 engineering cases completed in:
+
+278.0669 seconds
+
+Average:
+
+~1.39 seconds/pair
+
+This local measurement is provided as engineering evidence.
+
+Official evaluator runtime remains authoritative.
+
+Known Limitations
+
+Periodic Structures
+
+Repeated semiconductor structures can produce strong incorrect correlation peaks.
+
+Top-1 Selection
+
+The strongest correlation peak is not guaranteed to correspond to the required target.
+
+Candidate Pool
+
+If the correct location is not retained in the candidate pool, local refinement cannot recover it.
+
+RGB
+
+The current production path converts RGB input to grayscale and does not exploit color information.
+
+Official Set D
+
+No official Set D optical bonus result is claimed because the official blind Set D data was not available for local validation.
+
+Threshold Calibration
+
+The 0.85 rejection threshold is a production engineering choice based on the available local validation.
+
+It is not claimed to be globally optimal for the organizer's blind dataset.
+
+Local Benchmark
+
+The V4 engineering dataset is not the organizer's official Phase 2 A/B/C/D dataset.
+
+Design Decisions
+
+Layered Architecture
+
+Global search and local refinement are intentionally separated.
+
+Candidate Diversity
+
+Multiple spatial candidates are retained because repeated structures create aliases.
+
+Full-Resolution Verification
+
+Coarse correlation is followed by higher-resolution verification before final output.
+
+Sub-Pixel Refinement
+
+Local response interpolation improves coordinate precision.
+
+Learned Residual
+
+SNRN predicts a small correction instead of solving the entire global localization problem.
+
+Confidence-Aware Fusion
+
+AI refinement is treated as a correction signal rather than an unconditional replacement.
+
+Fixed Production Threshold
+
+The production path uses a fixed rejection threshold to keep evaluator behavior deterministic.
+
+Why Hybrid CV + AI
+
+A pure classical approach has difficulty with:
+
+degraded imagery,
+
+local appearance variation,
+
+and small residual localization errors.
+
+A pure neural global locator has difficulty with:
+
+precise spatial search,
+
+repeated semiconductor structures,
+
+deterministic behavior,
+
+and interpretability.
+
+The hybrid architecture combines their strengths:
+
+Classical CV
+    |
+    +--> broad spatial reasoning
+    |
+    +--> correlation surface
+    |
+    +--> candidate generation
+    |
+    v
+Learned refinement
+    |
+    +--> local residual correction
+    |
+    v
+Decision fusion
+
+This division of responsibility keeps the neural problem smaller.
+
+Periodic Ambiguity
+
+Periodic ambiguity is one of the most important failure modes.
+
+Consider a repeated pattern:
+
+|--A--|--A--|--A--|--A--|
+
+A template may correlate strongly with several occurrences.
+
+Therefore:
+
+Highest score
+      !=
+Always correct location
+
+The system addresses this by retaining multiple spatially distinct candidates.
+
+However, candidate diversity does not completely solve the final selection problem.
+
+This is why periodic aliasing remains a known limitation.
+
+Candidate Recall
+
+Candidate recall is a prerequisite for correct localization.
+
+If:
+
+Correct candidate is generated
+
+then downstream verification and refinement have an opportunity to select it.
+
+If:
+
+Correct candidate is never generated
+
+then:
+
+NCC cannot recover it
+SNRN cannot recover it
+Decision fusion cannot recover it
+
+Therefore the Phase 2 architecture prioritizes candidate diversity before expensive refinement.
+
+Confidence and Rejection
+
+The rejection problem is different from coordinate refinement.
+
+For an absent target, the system must avoid returning a random high-scoring repeated structure as a valid match.
+
+The production decision is:
+
+GSPE score >= 0.85
+        |
+        v
+       FOUND
+
+GSPE score < 0.85
+        |
+        v
+      REJECT
+
+On rejection:
+
+found = 0
+x = 0
+y = 0
+theta = 0
+scale = 0
+
+This prevents stale or invalid pose values from being emitted for rejected pairs.
+
+Local engineering validation produced:
+
+Precision = 1.0000
+Recall    = 0.9800
+F1        = 0.9899
+
+These values are local validation results, not official leaderboard results.
+
+Submission Safety
+
+Before creating the final submission ZIP, verify:
+
+register.py
+requirements.txt
+generate_dataset.py
+failure_analysis.pdf
+best_model.pth
+
+Verify the model is actually present.
+
+Verify the requirements file installs in a clean Python 3.11 environment.
+
+Verify:
+
+python -m pip check
+
+Verify:
+
+python register.py --help
+
+Verify the output header:
+
+pair_id,x,y,theta,scale,found,score
+
+Do not include:
+
+.venv/
+dataset/
+outputs/
+temporary logs/
+temporary benchmark CSVs/
+debug scripts/
+
+unless the submission instructions explicitly require them.
+
+Troubleshooting
+
+destination path already exists
+
+If:
+
+fatal: destination path 'SilicoForge' already exists
+
+appears, clone into a new directory:
+
+git clone -b phase2-development https://github.com/marakahansika27-prog/SilicoForge.git SilicoForge-Phase2
+
+Wrong Python Version
+
+Check:
+
+python --version
+
+Use Python 3.11.
+
+Dependency Problems
+
+Run:
+
+python -m pip install -r requirements.txt
+python -m pip check
+
+Model Not Found
+
+Verify:
+
+Test-Path models\best_model.pth
+
+Expected:
+
+True
+
+register.py Usage Error
+
+Run:
+
+python register.py --help
+
+Correct usage:
+
+python register.py --input pairs.csv --output predictions.csv
+
+Input Image Not Found
+
+Check that the paths in the input CSV are valid from the repository root.
+
+Rejected Target Has Coordinates
+
+For found=0, production output should contain:
+
+x = 0
+y = 0
+theta = 0
+scale = 0
+
+The evaluator-facing score may remain nonzero because it records the internal matching score.
+
+Documentation
+
+The repository includes:
+
+README.md
+failure_analysis.pdf
+
+The README documents:
+
+Phase 1 architecture,
+
+Phase 2 architecture,
+
+installation,
+
+evaluator usage,
+
+output contract,
+
+dataset structure,
+
+limitations,
+
+validation,
+
+and submission safety.
+
+The failure analysis documents:
+
+observed failure modes,
+
+periodic aliasing,
+
+selection failures,
+
+rejection behavior,
+
+local validation,
+
+and production design decisions.
+
+References
+
+Organizer Phase 2 Specification
+
+The organizer-provided Phase 2 specification defines:
+
+registration under unknown pose,
+
+scale and rotation search,
+
+present and absent cases,
+
+the official A/B/C/D composition,
+
+output fields,
+
+scoring,
+
+rejection,
+
+runtime,
+
+and submission requirements.
+
+The organizer specification is authoritative for evaluation.
+
+Core Technical Concepts
+
+The implementation uses established computer-vision concepts including:
+
+normalized cross-correlation,
+
+image conditioning,
+
+multi-scale matching,
+
+rotation hypotheses,
+
+local peak refinement,
+
+sub-pixel interpolation,
+
+and learned residual regression.
+
+The project-specific implementation is contained in this repository.
+
+Project Status
+
+Phase 1
+
+Status:
+
+COMPLETED
+
+Historical benchmark:
+
+40 / 60
+66.7%
+
+Phase 2
+
+Status:
+
+SUBMISSION ENGINEERING / FROZEN PRODUCTION PATH
+
+Implemented:
+
+Unknown scale                  [x]
+Unknown rotation               [x]
+Multi-candidate search         [x]
+Candidate verification         [x]
+Sub-pixel localization         [x]
+AI residual refinement         [x]
+Pose output                    [x]
+Absent-target rejection        [x]
+Confidence score               [x]
+CPU-only execution             [x]
+Evaluator-facing register.py   [x]
+Submission model artifact      [x]
+Failure analysis               [x]
+Installation documentation     [x]
+
+Local clean-clone verification:
+
+PASS
+
+The clean-clone test verified that the Phase 2 branch can be cloned into a fresh directory, dependencies can be installed, the model can be loaded, the production entry point can execute, and a real image pair can produce a valid prediction CSV.
+
+Final Production Command
+
+For Phase 2 evaluator execution:
+
+python register.py --input pairs.csv --output predictions.csv
+
+Expected output header:
+
+pair_id,x,y,theta,scale,found,score
+
+The evaluator-supplied dataset and scoring rules remain authoritative.
+
+License
+
+No separate open-source license has been declared in this project documentation.
+
+Unless a license file is added to the repository, users should treat the repository contents as source code provided for the intended project/submission context rather than assuming broad redistribution rights.
