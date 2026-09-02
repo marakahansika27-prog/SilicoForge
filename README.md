@@ -279,38 +279,38 @@ SilicoForge was developed as a layered localization system rather than as a sing
 The engineering progression was:
 
 Constrained localization
-        |
-        v
+|
+v
 Image conditioning
-        |
-        v
+|
+v
 Global correlation search
-        |
-        v
+|
+v
 Sub-pixel localization
-        |
-        v
+|
+v
 Learned residual refinement
-        |
-        v
+|
+v
 Decision fusion
-        |
-        v
+|
+v
 Phase 1 localization
-        |
-        v
+|
+v
 Phase 2 unknown-pose registration
-        |
-        v
+|
+v
 Scale + rotation search
-        |
-        v
+|
+v
 Candidate diversity
-        |
-        v
+|
+v
 Pose recovery + rejection
-        |
-        v
+|
+v
 Evaluator-facing production pipeline
 
 The central design principle is to let classical computer vision perform broad spatial reasoning and let the learned model perform a small, local residual correction.
@@ -342,14 +342,14 @@ The neural network was not designed to replace global search.
 Instead:
 
 Global CV search
-      |
-      v
+|
+v
 Candidate
-      |
-      v
+|
+v
 Local precision
-      |
-      v
+|
+v
 Small learned residual
 
 Phase 1 Problem Definition
@@ -421,56 +421,68 @@ and documentation.
 Phase 1 Architecture
 
 Reference Image
-       |
-       v
+|
+v
 Image Conditioning Engine (ICE)
-       |
-       v
+|
+v
 Search Image
-       |
-       v
+|
+v
 Global Search Proposal Engine (GSPE)
-       |
-       v
+|
+v
 Candidate Localization
-       |
-       v
+|
+v
 Sub-Pixel Peak Estimation
-       |
-       +-----------------------+
-       |                       |
-       v                       v
+|
++-----------------------+
+|                       |
+v                       v
 Classical Coordinate      SNRN Residual
-                               |
-                               v
-                         (dx, dy)
-       |                       |
-       +-----------+-----------+
-                   |
-                   v
-          Confidence-Aware
-             Decision Fusion
-                   |
-                   v
-               Final (x,y)
+|
+v
+(dx, dy)
+|                       |
++-----------+-----------+
+|
+v
+Confidence-Aware
+Decision Fusion
+|
+v
+Final (x,y)
 
 Phase 1 Pipeline
 
 The Phase 1 production concept is:
 
-1. Load reference
-2. Load search image
-3. Condition image pair
-4. Generate global search hypotheses
-5. Compute correlation responses
-6. Extract candidate peaks
-7. Select candidate
-8. Refine peak
-9. Prepare AI input
-10. Predict residual
-11. Estimate confidence
-12. Fuse classical and AI results
-13. Return final coordinate
+Load reference
+
+Load search image
+
+Condition image pair
+
+Generate global search hypotheses
+
+Compute correlation responses
+
+Extract candidate peaks
+
+Select candidate
+
+Refine peak
+
+Prepare AI input
+
+Predict residual
+
+Estimate confidence
+
+Fuse classical and AI results
+
+Return final coordinate
 
 The separation between broad search and local refinement is intentional.
 
@@ -535,14 +547,14 @@ The system refines an integer candidate using the local correlation surface.
 Conceptually:
 
 Integer peak
-    |
-    v
+|
+v
 Local response neighborhood
-    |
-    v
+|
+v
 Sub-pixel interpolation
-    |
-    v
+|
+v
 Fractional coordinate
 
 The resulting coordinate may contain fractional values such as:
@@ -600,15 +612,15 @@ The system evaluates whether the learned correction should be trusted.
 Conceptually:
 
 Classical coordinate
-        |
-        +------------------+
-                           |
+|
++------------------+
+|
 AI residual -------------->|
-                           | Decision Fusion
+| Decision Fusion
 AI confidence ------------>|
-                           |
-                           v
-                    Final coordinate
+|
+v
+Final coordinate
 
 This design was chosen for interpretability and safety.
 
@@ -712,9 +724,9 @@ The most important lesson was periodic ambiguity.
 Repeated semiconductor structures can produce:
 
 Correct high peak
-        +
++
 Incorrect high peak
-        +
++
 Other visually similar peaks
 
 A single global argmax can therefore select the wrong repeated structure.
@@ -873,43 +885,43 @@ Phase 2 Architecture
 The production path is:
 
 Reference + Search
-        |
-        v
-       ICE
-        |
-        v
-       GSPE
-        |
-        +--> Multi-scale hypotheses
-        |
-        +--> Multi-rotation hypotheses
-        |
-        v
+|
+v
+ICE
+|
+v
+GSPE
+|
++--> Multi-scale hypotheses
+|
++--> Multi-rotation hypotheses
+|
+v
 Top-K spatial candidates
-        |
-        v
+|
+v
 Candidate verification
-        |
-        v
+|
+v
 Full-resolution NCC
-        |
-        v
+|
+v
 Sub-pixel refinement
-        |
-        v
+|
+v
 SNRN / AI refinement
-        |
-        v
+|
+v
 Decision Fusion
-        |
-        +----------------+
-        |                |
-        v                v
-      FOUND           REJECT
-        |                |
-        +-------+--------+
-                |
-                v
+|
++----------------+
+|                |
+v                v
+FOUND           REJECT
+|                |
++-------+--------+
+|
+v
 (x, y, theta, scale, found, score)
 
 Phase 2 Image Conditioning
@@ -919,11 +931,11 @@ ICE remains part of the Phase 2 production path.
 The reason is unchanged:
 
 Condition input
-      |
-      v
+|
+v
 Reduce nuisance variation
-      |
-      v
+|
+v
 Run pose-aware global search
 
 Keeping conditioning separate from search makes the system easier to diagnose and maintain.
@@ -946,7 +958,7 @@ The rotation range is approximately:
 
 -5 degrees
 ...
- 0 degrees
+0 degrees
 ...
 +5 degrees
 
@@ -979,11 +991,11 @@ Expensive precision processing is not applied to every possible location.
 Instead:
 
 Global search
-    |
-    v
+|
+v
 Shortlist
-    |
-    v
+|
+v
 High-resolution verification
 
 Candidate geometry includes:
@@ -1005,7 +1017,7 @@ scale
 The rotation convention is:
 
 theta = rotation of the reference as it appears
-        in the wide-search image
+in the wide-search image
 
 Positive rotation is counter-clockwise.
 
@@ -1022,17 +1034,17 @@ After candidate selection, the system performs local high-resolution localizatio
 The process is:
 
 Selected candidate
-       |
-       v
+|
+v
 Full-resolution NCC
-       |
-       v
+|
+v
 Local peak
-       |
-       v
+|
+v
 Sub-pixel refinement
-       |
-       v
+|
+v
 Fractional x,y
 
 The final coordinate remains in wide-search coordinates.
@@ -1046,17 +1058,17 @@ The learned refinement stage remains local.
 The design is:
 
 Classical candidate
-        |
-        v
+|
+v
 Sub-pixel coordinate
-        |
-        +------> SNRN
-                  |
-                  v
-              (dx, dy)
-                  |
-                  v
-          Decision Fusion
+|
++------> SNRN
+|
+v
+(dx, dy)
+|
+v
+Decision Fusion
 
 The neural model is not responsible for discovering the target over the entire search image.
 
@@ -1073,14 +1085,14 @@ GSPE_REJECTION_THRESHOLD = 0.85
 The decision logic is:
 
 score >= 0.85
-        |
-        v
-     found = 1
+|
+v
+found = 1
 
 score < 0.85
-        |
-        v
-     found = 0
+|
+v
+found = 0
 
 When a target is rejected, pose fields are zeroed in the evaluator output.
 
@@ -1105,7 +1117,7 @@ An internal AI/refinement confidence may also be used during decision fusion.
 These values should not be confused:
 
 Internal refinement confidence
-            !=
+!=
 Evaluator-facing score
 
 For example, a local engineering demo produced an internal confidence near 0.9987 while the final GSPE/evaluator-facing score was approximately 0.9422.
@@ -1215,23 +1227,23 @@ Phase 2 Failure Analysis
 
 The principal observed failure modes are:
 
-1. Periodic aliasing
+Periodic aliasing
 
 Repeated layout structures can produce strong incorrect correlation peaks.
 
-2. Top-1 selection failure
+Top-1 selection failure
 
 The correct candidate can exist in the search response while an incorrect repeated structure ranks first.
 
-3. Candidate generation failure
+Candidate generation failure
 
 If the correct target is not retained in the candidate set, later refinement cannot recover it.
 
-4. Rejection false negatives
+Rejection false negatives
 
 A present target can occasionally fall below the fixed rejection threshold.
 
-5. AI refinement limitation
+AI refinement limitation
 
 A local learned residual cannot repair a globally incorrect candidate.
 
@@ -1251,8 +1263,8 @@ The production path therefore accepts RGB image files but converts them to grays
 This means:
 
 RGB file input
-      |
-      v
+|
+v
 Grayscale processing
 
 The system does not claim to exploit color information.
@@ -1335,25 +1347,25 @@ SilicoForge/
 |   +-- best_model.pth
 |
 +-- src/
-    |
-    +-- preprocessing/
-    |   +-- ice.py
-    |
-    +-- coarse_search/
-    |   +-- gspe.py
-    |
-    +-- ai_refinement/
-    |   +-- network.py
-    |   +-- inference.py
-    |   +-- dataset.py
-    |   +-- augmentations.py
-    |   +-- loss.py
-    |   +-- trainer.py
-    |
-    +-- integration/
-    |   +-- pipeline_backup_v2_ai.py
-    |
-    +-- utils/
+|
++-- preprocessing/
+|   +-- ice.py
+|
++-- coarse_search/
+|   +-- gspe.py
+|
++-- ai_refinement/
+|   +-- network.py
+|   +-- inference.py
+|   +-- dataset.py
+|   +-- augmentations.py
+|   +-- loss.py
+|   +-- trainer.py
+|
++-- integration/
+|   +-- pipeline_backup_v2_ai.py
+|
++-- utils/
 
 Additional source files and directories are retained in the repository for training, evaluation, utilities, and development support.
 
@@ -1461,7 +1473,7 @@ Installation
 
 SilicoForge Phase 2 is validated for Python 3.11 and CPU-only execution.
 
-1. Clone the Phase 2 Repository
+Clone the Phase 2 Repository
 
 Clone the Phase 2 branch directly:
 
@@ -1472,12 +1484,12 @@ This explicitly checks out the phase2-development branch.
 
 If a local repository already exists, do not clone into the existing non-empty directory.
 
-2. Create a Python 3.11 Environment
+Create a Python 3.11 Environment
 
 Windows PowerShell:
 
 py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+..venv\Scripts\Activate.ps1
 
 Verify:
 
@@ -1493,11 +1505,11 @@ python3.11 -m venv .venv
 source .venv/bin/activate
 python --version
 
-3. Install Dependencies
+Install Dependencies
 
 python -m pip install -r requirements.txt
 
-4. Verify Dependencies
+Verify Dependencies
 
 python -m pip check
 
@@ -1505,17 +1517,17 @@ Expected:
 
 No broken requirements found.
 
-5. Verify the Entry Point
+Verify the Entry Point
 
 python register.py --help
 
-6. Verify the Model
+Verify the Model
 
 The production model should exist at:
 
 models/best_model.pth
 
-7. Run Registration
+Run Registration
 
 python register.py --input pairs.csv --output predictions.csv
 
@@ -1526,26 +1538,26 @@ Phase 1 is the completed constrained-pose localization foundation.
 The processing concept is:
 
 Reference
-   |
-   v
+|
+v
 ICE
-   |
-   v
+|
+v
 GSPE
-   |
-   v
+|
+v
 Candidate
-   |
-   v
+|
+v
 Sub-pixel refinement
-   |
-   v
+|
+v
 SNRN residual
-   |
-   v
+|
+v
 Decision fusion
-   |
-   v
+|
+v
 (x, y)
 
 Phase 1 benchmark numbers in this README are historical project measurements.
@@ -1554,31 +1566,31 @@ They should not be interpreted as Phase 2 results.
 
 Phase 2 Quick Start
 
-1. Clone
+Clone
 
 git clone -b phase2-development https://github.com/marakahansika27-prog/SilicoForge.git SilicoForge-Phase2
 cd SilicoForge-Phase2
 
-2. Create Environment
+Create Environment
 
 Windows:
 
 py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+..venv\Scripts\Activate.ps1
 
-3. Install
+Install
 
 python -m pip install -r requirements.txt
 
-4. Verify
+Verify
 
 python -m pip check
 
-5. Run
+Run
 
 python register.py --input pairs.csv --output predictions.csv
 
-6. Output
+Output
 
 pair_id,x,y,theta,scale,found,score
 
@@ -1589,29 +1601,29 @@ Evaluator Workflow
 The evaluator workflow is:
 
 Evaluator pair CSV
-        |
-        v
+|
+v
 register.py
-        |
-        v
+|
+v
 Load reference/search
-        |
-        v
+|
+v
 ICE
-        |
-        v
+|
+v
 GSPE
-        |
-        v
+|
+v
 Candidate verification
-        |
-        v
+|
+v
 Sub-pixel + AI refinement
-        |
-        v
+|
+v
 Decision / rejection
-        |
-        v
+|
+v
 predictions.csv
 
 The evaluator should execute the command from the repository root.
@@ -1678,7 +1690,7 @@ The output position represents the center of the located reference pattern.
 The rotation convention is:
 
 theta = rotation of the reference as it appears
-        in the wide-search image
+in the wide-search image
 
 Positive rotation is counter-clockwise.
 
@@ -1695,20 +1707,20 @@ Training is separate from evaluator inference.
 A conceptual training workflow is:
 
 Generate synthetic data
-        |
-        v
+|
+v
 Create reference/search pairs
-        |
-        v
+|
+v
 Compute residual labels
-        |
-        v
+|
+v
 Train SNRN
-        |
-        v
+|
+v
 Validate
-        |
-        v
+|
+v
 Save checkpoint
 
 The resulting checkpoint is used during inference.
@@ -1720,23 +1732,23 @@ Evaluation Workflow
 A local evaluation workflow is:
 
 Generate / prepare benchmark
-        |
-        v
+|
+v
 Create input CSV
-        |
-        v
+|
+v
 Run register.py
-        |
-        v
+|
+v
 Read predictions
-        |
-        v
+|
+v
 Compare against ground truth
-        |
-        v
+|
+v
 Calculate metrics
-        |
-        v
+|
+v
 Inspect failure modes
 
 Evaluation should distinguish:
@@ -1781,7 +1793,7 @@ cd SilicoForge-Phase2
 Create the environment:
 
 py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+..venv\Scripts\Activate.ps1
 
 Install:
 
@@ -1824,14 +1836,14 @@ Performance
 The system is designed around a staged architecture:
 
 Cheap broad search
-       |
-       v
+|
+v
 Small candidate set
-       |
-       v
+|
+v
 Expensive local verification
-       |
-       v
+|
+v
 Small AI refinement
 
 This avoids applying full-resolution and AI processing across the entire search image.
@@ -1933,19 +1945,19 @@ and interpretability.
 The hybrid architecture combines their strengths:
 
 Classical CV
-    |
-    +--> broad spatial reasoning
-    |
-    +--> correlation surface
-    |
-    +--> candidate generation
-    |
-    v
+|
++--> broad spatial reasoning
+|
++--> correlation surface
+|
++--> candidate generation
+|
+v
 Learned refinement
-    |
-    +--> local residual correction
-    |
-    v
+|
++--> local residual correction
+|
+v
 Decision fusion
 
 This division of responsibility keeps the neural problem smaller.
@@ -1963,7 +1975,7 @@ A template may correlate strongly with several occurrences.
 Therefore:
 
 Highest score
-      !=
+!=
 Always correct location
 
 The system addresses this by retaining multiple spatially distinct candidates.
@@ -2003,14 +2015,14 @@ For an absent target, the system must avoid returning a random high-scoring repe
 The production decision is:
 
 GSPE score >= 0.85
-        |
-        v
-       FOUND
+|
+v
+FOUND
 
 GSPE score < 0.85
-        |
-        v
-      REJECT
+|
+v
+REJECT
 
 On rejection:
 
