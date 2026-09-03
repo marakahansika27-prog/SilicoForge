@@ -1,4 +1,4 @@
-# SilicoForge
+﻿# SilicoForge
 
 ### Hybrid Sub-Pixel Localization for Semiconductor Pattern Images
 
@@ -8,44 +8,76 @@ The system combines deterministic image conditioning, correlation-based global s
 
 SilicoForge was developed through two stages:
 
-- **Phase 1:** constrained-pose semiconductor pattern localization.
-- **Phase 2:** registration under unknown pose, including scale, rotation, degraded images, absent targets, rejection, confidence, and CPU-only inference.
+- ****Phase 1:**** constrained-pose semiconductor pattern localization.
+
+- ****Phase 2:**** registration under unknown pose, including scale, rotation, degraded images, absent targets, rejection, confidence, and CPU-only inference.
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
+
 - [Problem](#problem)
+
 - [Solution](#solution)
+
 - [Phase 1](#phase-1)
+
 - [Phase 2](#phase-2)
+
 - [System Architecture](#system-architecture)
+
 - [Pipeline](#pipeline)
-  - [Image Conditioning](#image-conditioning)
-  - [Global Search](#global-search)
-  - [Candidate Generation](#candidate-generation)
-  - [Candidate Verification](#candidate-verification)
-  - [Sub-Pixel Localization](#sub-pixel-localization)
-  - [Learned Refinement](#learned-refinement)
-  - [Decision and Rejection](#decision-and-rejection)
+
+  - [Image Conditioning](#image-conditioning)
+
+  - [Global Search](#global-search)
+
+  - [Candidate Generation](#candidate-generation)
+
+  - [Candidate Verification](#candidate-verification)
+
+  - [Sub-Pixel Localization](#sub-pixel-localization)
+
+  - [Learned Refinement](#learned-refinement)
+
+  - [Decision and Rejection](#decision-and-rejection)
+
 - [Installation](#installation)
+
 - [Quick Start](#quick-start)
+
 - [Input Format](#input-format)
+
 - [Output Format](#output-format)
+
 - [Pose Convention](#pose-convention)
+
 - [Dataset](#dataset)
+
 - [Evaluation](#evaluation)
+
 - [Runtime](#runtime)
+
 - [Model](#model)
+
 - [RGB Handling](#rgb-handling)
+
 - [Failure Analysis](#failure-analysis)
+
 - [Known Limitations](#known-limitations)
+
 - [Repository Structure](#repository-structure)
+
 - [Important Files](#important-files)
+
 - [Reproducibility](#reproducibility)
+
 - [Submission Package](#submission-package)
+
 - [Team](#team)
+
 - [License](#license)
 
 ---
@@ -56,37 +88,66 @@ The goal of SilicoForge is to find a small semiconductor reference pattern insid
 
 The challenge is that semiconductor layouts frequently contain repeated structures. Several regions can therefore look similar to the reference and produce strong matching responses.
 
-SilicoForge addresses this by separating **global discovery** from **local precision refinement**.
+SilicoForge addresses this by separating ****global discovery**** from ****local precision refinement****.
 
 ```text
+
 Reference + Search
-        |
-        v
+
+        |
+
+        v
+
 Image Conditioning (ICE)
-        |
-        v
+
+        |
+
+        v
+
 Global Search (GSPE)
-        |
-        v
+
+        |
+
+        v
+
 Scale / Rotation Hypotheses
-        |
-        v
+
+        |
+
+        v
+
 Spatially Diverse Candidates
-        |
-        v
+
+        |
+
+        v
+
 High-Resolution Verification
-        |
-        v
+
+        |
+
+        v
+
 Sub-Pixel Localization
-        |
-        v
+
+        |
+
+        v
+
 SNRN / Learned Refinement
-        |
-        v
+
+        |
+
+        v
+
 Decision / Rejection
-        |
-        v
+
+        |
+
+        v
+
 Final Prediction
+
 ```
 
 The production system is designed for CPU execution and does not require network access during inference.
@@ -100,16 +161,23 @@ Given a reference semiconductor image and a larger search image, the system must
 If the target is present, the system estimates:
 
 ```text
+
 x
+
 y
+
 theta
+
 scale
+
 ```
 
 If the target is absent or rejected:
 
 ```text
+
 found = 0
+
 ```
 
 with zero pose fields.
@@ -124,14 +192,21 @@ SilicoForge uses a hybrid architecture rather than relying on a single neural ne
 
 The main stages are:
 
-1. **ICE** conditions the images.
-2. **GSPE** performs broad correlation-based search.
-3. Multiple scale and rotation hypotheses are evaluated.
-4. Spatially distinct candidates are retained.
-5. Candidates are verified at higher resolution.
-6. The selected response is refined to sub-pixel precision.
-7. **SNRN** provides a learned local residual correction.
-8. Decision fusion produces the final prediction and rejection decision.
+1\. ****ICE**** conditions the images.
+
+2\. ****GSPE**** performs broad correlation-based search.
+
+3\. Multiple scale and rotation hypotheses are evaluated.
+
+4\. Spatially distinct candidates are retained.
+
+5\. Candidates are verified at higher resolution.
+
+6\. The selected response is refined to sub-pixel precision.
+
+7\. ****SNRN**** provides a learned local residual correction.
+
+8\. Decision fusion produces the final prediction and rejection decision.
 
 The central design principle is:
 
@@ -144,28 +219,51 @@ The central design principle is:
 Phase 1 established the core localization pipeline under constrained pose.
 
 ```text
+
 Reference
-    |
-    v
+
+    |
+
+    v
+
 ICE
-    |
-    v
+
+    |
+
+    v
+
 GSPE
-    |
-    v
+
+    |
+
+    v
+
 Candidate Localization
-    |
-    v
+
+    |
+
+    v
+
 Sub-Pixel Refinement
-    |
-    v
+
+    |
+
+    v
+
 SNRN Residual
-    |
-    v
+
+    |
+
+    v
+
 Decision Fusion
-    |
-    v
+
+    |
+
+    v
+
 (x, y)
+
 ```
 
 Phase 1 focused primarily on accurate spatial localization and forms the foundation of the Phase 2 registration pipeline.
@@ -181,31 +279,49 @@ Phase 2 extends the system to unknown pose.
 The production system handles:
 
 - scale variation,
+
 - rotation variation,
+
 - degraded images,
+
 - absent targets,
+
 - localization,
+
 - pose estimation,
+
 - confidence,
+
 - rejection,
+
 - CPU-only inference.
 
 Nominal disclosed search range:
 
 ```text
-Scale:      8 to 12
-Rotation:  -5 to +5 degrees
+
+Scale:      8 to 12
+
+Rotation:  -5 to +5 degrees
+
 ```
 
 The evaluator-facing output contains:
 
 ```text
+
 x
+
 y
+
 theta
+
 scale
+
 found
+
 score
+
 ```
 
 The official organizer dataset and scoring rules are authoritative for final evaluation.
@@ -215,34 +331,63 @@ The official organizer dataset and scoring rules are authoritative for final eva
 # System Architecture
 
 ```text
+
 Reference Image
-      |
-      v
-     ICE
-      |
-      v
-     GSPE
-      |
-      v
+
+      |
+
+      v
+
+     ICE
+
+      |
+
+      v
+
+     GSPE
+
+      |
+
+      v
+
 Scale / Rotation Search
-      |
-      v
+
+      |
+
+      v
+
 Spatial Candidate Pool
-      |
-      v
+
+      |
+
+      v
+
 High-Resolution NCC
-      |
-      v
+
+      |
+
+      v
+
 Sub-Pixel Refinement
-      |
-      v
+
+      |
+
+      v
+
 SNRN / Learned Residual
-      |
-      v
+
+      |
+
+      v
+
 Decision Fusion
-     / \
-    /   \
- FOUND  REJECT
+
+     / \\
+
+    /   \\
+
+ FOUND  REJECT
+
 ```
 
 ---
@@ -258,7 +403,9 @@ ICE performs deterministic preprocessing before global matching.
 Implementation:
 
 ```text
+
 src/preprocessing/ice.py
+
 ```
 
 ## Global Search
@@ -270,7 +417,9 @@ Phase 2 searches across multiple scale and rotation hypotheses instead of assumi
 Implementation:
 
 ```text
+
 src/coarse_search/gspe.py
+
 ```
 
 ## Candidate Generation
@@ -280,16 +429,27 @@ Repeated semiconductor structures can produce multiple strong peaks.
 GSPE therefore retains multiple spatially distinct candidates.
 
 ```text
+
 Search Response
-      |
-      v
+
+      |
+
+      v
+
 Strong Peaks
-      |
-      v
+
+      |
+
+      v
+
 Spatial Diversity / NMS
-      |
-      v
+
+      |
+
+      v
+
 Candidate Pool
+
 ```
 
 ## Candidate Verification
@@ -303,16 +463,27 @@ The production path uses full-resolution normalized cross-correlation (NCC) duri
 The selected correlation response is locally refined:
 
 ```text
+
 Integer Peak
-     |
-     v
+
+     |
+
+     v
+
 Local Response Neighborhood
-     |
-     v
+
+     |
+
+     v
+
 Sub-Pixel Refinement
-     |
-     v
+
+     |
+
+     v
+
 Fractional (x, y)
+
 ```
 
 ## Learned Refinement
@@ -320,7 +491,9 @@ Fractional (x, y)
 SNRN predicts a small local residual:
 
 ```text
+
 (dx, dy)
+
 ```
 
 The learned component is used for local refinement rather than global target discovery.
@@ -330,11 +503,276 @@ The learned component is used for local refinement rather than global target dis
 The production decision uses:
 
 ```text
-score >= 0.85  -> found = 1
-score <  0.85  -> found = 0
+
+score >= 0.85  -> found = 1
+
+score <  0.85  -> found = 0
+
 ```
 
 For a rejected target:
+
+```text
+
+x     = 0
+
+y     = 0
+
+theta = 0
+
+scale = 0
+
+```
+
+---
+
+# Installation
+
+## Step 1 — Clone the Phase 2 Repository
+
+Open PowerShell:
+
+```powershell
+cd C:\Users\marak
+git clone -b phase2-development https://github.com/marakahansika27-prog/SilicoForge.git SilicoForge-Phase2
+```
+
+## Step 2 — Enter the Repository
+
+```powershell
+cd C:\Users\marak\SilicoForge-Phase2
+```
+
+## Step 3 — Verify the Branch
+
+```powershell
+git branch --show-current
+```
+
+Expected:
+
+```text
+phase2-development
+```
+
+## Step 4 — Verify the Production Model
+
+```powershell
+dir models
+```
+
+The repository should contain:
+
+```text
+best_model.pth
+```
+
+This confirms that the production model is available locally.
+
+## Step 5 — Create the Python 3.11 Environment
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+Install the dependencies:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+Verify the environment:
+
+```powershell
+python -m pip check
+```
+
+Expected:
+
+```text
+No broken requirements found.
+```
+
+## Step 6 — Verify the Production Interface
+
+```powershell
+python register.py --help
+```
+
+If the help message is displayed, the production entry point is available.
+
+---
+
+# Quick Start
+
+The following example demonstrates both production outcomes:
+
+1. **Target found**
+2. **Target not found / rejected**
+
+The demonstration uses two local V4 development cases.
+
+> **Note:** These V4 cases are development examples only. They are not the official Phase 2 A/B/C/D evaluation dataset.
+
+## Step 7 — Copy the Demo Cases
+
+Copy the present example:
+
+```powershell
+Copy-Item -Recurse `
+"C:\d-s\Drift-Sense-V2\dataset\hackathon_v4\dram\case_v4_dram_present_000" `
+"C:\Users\marak\SilicoForge-Phase2\dataset\hackathon_v4\dram\"
+```
+
+Copy the absent example:
+
+```powershell
+Copy-Item -Recurse `
+"C:\d-s\Drift-Sense-V2\dataset\hackathon_v4\dram\case_v4_dram_absent_000" `
+"C:\Users\marak\SilicoForge-Phase2\dataset\hackathon_v4\dram\"
+```
+
+> **Development-machine note:** The `C:\d-s\Drift-Sense-V2\...` source paths above are specific to the development environment used to prepare the demonstration. They are not required by the production evaluator.
+
+## Step 8 — Verify the Demo Images
+
+Verify the present case:
+
+```powershell
+Test-Path dataset\hackathon_v4\dram\case_v4_dram_present_000\reference.png
+```
+
+Expected:
+
+```text
+True
+```
+
+```powershell
+Test-Path dataset\hackathon_v4\dram\case_v4_dram_present_000\search.png
+```
+
+Expected:
+
+```text
+True
+```
+
+Verify the absent case:
+
+```powershell
+Test-Path dataset\hackathon_v4\dram\case_v4_dram_absent_000\reference.png
+```
+
+Expected:
+
+```text
+True
+```
+
+```powershell
+Test-Path dataset\hackathon_v4\dram\case_v4_dram_absent_000\search.png
+```
+
+Expected:
+
+```text
+True
+```
+
+---
+
+## Found Target Demo
+
+### Step 9 — Create the Input CSV
+
+```powershell
+@"
+pair_id,reference,search
+case_v4_dram_present_000,dataset\hackathon_v4\dram\case_v4_dram_present_000\reference.png,dataset\hackathon_v4\dram\case_v4_dram_present_000\search.png
+"@ | Set-Content pairs_demo.csv
+```
+
+### Step 10 — Verify the Input
+
+```powershell
+Get-Content pairs_demo.csv
+```
+
+Expected:
+
+```text
+pair_id,reference,search
+case_v4_dram_present_000,dataset\hackathon_v4\dram\case_v4_dram_present_000\reference.png,dataset\hackathon_v4\dram\case_v4_dram_present_000\search.png
+```
+
+### Step 11 — Run Registration
+
+```powershell
+python register.py --input pairs_demo.csv --output predictions_demo.csv
+```
+
+The system should process the pair and report a successful detection.
+
+### Step 12 — Inspect the Prediction
+
+```powershell
+Get-Content predictions_demo.csv
+```
+
+Expected structure:
+
+```text
+pair_id,x,y,theta,scale,found,score
+case_v4_dram_present_000,...,...,...,...,1,...
+```
+
+The important field is:
+
+```text
+found = 1
+```
+
+---
+
+## Not Found / Rejection Demo
+
+### Step 13 — Create the Absent-Case Input CSV
+
+```powershell
+@"
+pair_id,reference,search
+case_v4_dram_absent_000,dataset\hackathon_v4\dram\case_v4_dram_absent_000\reference.png,dataset\hackathon_v4\dram\case_v4_dram_absent_000\search.png
+"@ | Set-Content pairs_absent_demo.csv
+```
+
+### Step 14 — Run Registration
+
+```powershell
+python register.py --input pairs_absent_demo.csv --output predictions_absent_demo.csv
+```
+
+### Step 15 — Inspect the Prediction
+
+```powershell
+Get-Content predictions_absent_demo.csv
+```
+
+Expected structure:
+
+```text
+pair_id,x,y,theta,scale,found,score
+case_v4_dram_absent_000,0,0,0,0,0,...
+```
+
+The important field is:
+
+```text
+found = 0
+```
+
+For a rejected target, the pose fields are zero:
 
 ```text
 x     = 0
@@ -345,82 +783,32 @@ scale = 0
 
 ---
 
-# Installation
+## What This Demonstrates
 
-## Requirements
-
-Validated development environment:
+The Quick Start demonstrates the two principal production outcomes:
 
 ```text
-Python 3.11
-CPU
-8 GB RAM target environment
-No GPU required
-No network required during inference
+                    register.py
+                         |
+              +----------+----------+
+              |                     |
+              v                     v
+        Target Present        Target Absent
+              |                     |
+              v                     v
+          found = 1              found = 0
+              |                     |
+              v                     v
+       Localization + Pose     Rejection
 ```
 
-## Windows PowerShell
+For the official evaluator, the production command remains:
 
 ```powershell
-git clone -b phase2-development https://github.com/marakahansika27-prog/SilicoForge.git SilicoForge-Phase2
-cd SilicoForge-Phase2
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python --version
-python -m pip install -r requirements.txt
-python -m pip check
-```
-
-Expected:
-
-```text
-No broken requirements found.
-```
-
-## Linux / macOS
-
-```bash
-git clone -b phase2-development https://github.com/marakahansika27-prog/SilicoForge.git SilicoForge-Phase2
-cd SilicoForge-Phase2
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m pip check
-```
-
----
-
-# Quick Start
-
-Check the production interface:
-
-```bash
-python register.py --help
-```
-
-Run registration:
-
-```bash
 python register.py --input pairs.csv --output predictions.csv
 ```
 
-The trained model is expected at:
-
-```text
-models/best_model.pth
-```
-
-The output file is:
-
-```text
-predictions.csv
-```
-
-with header:
-
-```text
-pair_id,x,y,theta,scale,found,score
-```
+The evaluator-supplied dataset and official scoring rules remain authoritative.
 
 ---
 
@@ -429,7 +817,9 @@ pair_id,x,y,theta,scale,found,score
 The production program accepts:
 
 ```text
+
 --input pairs.csv
+
 ```
 
 The evaluator supplies pair identifiers and image paths.
@@ -437,9 +827,13 @@ The evaluator supplies pair identifiers and image paths.
 A simplified development example is:
 
 ```csv
+
 pair_id,reference,search
+
 example_001,path/to/reference.png,path/to/search.png
+
 example_002,path/to/reference2.png,path/to/search2.png
+
 ```
 
 The exact organizer-provided input schema takes precedence over this simplified example.
@@ -455,19 +849,25 @@ Every input pair must produce exactly one output row.
 Required output header:
 
 ```csv
+
 pair_id,x,y,theta,scale,found,score
+
 ```
 
 Accepted target:
 
 ```csv
+
 example_001,652.07,161.02,0.0,10.0,1,0.94
+
 ```
 
 Rejected target:
 
 ```csv
+
 example_002,0,0,0,0,0,0.42
+
 ```
 
 ## Output Rules
@@ -475,11 +875,17 @@ example_002,0,0,0,0,0,0.42
 For every input pair:
 
 - exactly one output row,
+
 - preserve `pair_id`,
+
 - `x` and `y` are search-image coordinates,
+
 - `theta` is reported in degrees,
+
 - `scale` is the recovered scale factor,
+
 - `found=1` means an accepted match,
+
 - `found=0` means rejected or absent.
 
 When `found=0`, all pose fields must be zero.
@@ -505,7 +911,9 @@ Positive rotation is counter-clockwise.
 Nominal Phase 2 range:
 
 ```text
+
 8 to 12
+
 ```
 
 ---
@@ -515,12 +923,18 @@ Nominal Phase 2 range:
 The organizer-defined Phase 2 composition is:
 
 | Set | Description | Count |
+
 |---|---|---:|
+
 | Set A | Nominal present | 70 |
+
 | Set B | Degraded present | 70 |
+
 | Set C | Absent | 40 |
+
 | Set D | RGB optical bonus | 20 |
-| **Total** | | **200** |
+
+| ****Total**** | | ****200**** |
 
 Sets A, B, and C form the core evaluation.
 
@@ -531,15 +945,21 @@ Set D is the optical/RGB bonus group.
 The local V4 engineering benchmark contained:
 
 ```text
+
 200 total
+
 100 present
+
 100 absent
 
 50 DRAM present
+
 50 DRAM absent
 
 50 FinFET present
+
 50 FinFET absent
+
 ```
 
 This local benchmark is not the official Phase 2 A/B/C/D dataset and should not be presented as official leaderboard data.
@@ -551,14 +971,22 @@ This local benchmark is not the official Phase 2 A/B/C/D dataset and should not 
 The Phase 2 base score is:
 
 | Dimension | Points |
+
 |---|---:|
+
 | Localization | 40 |
+
 | Pose | 20 |
+
 | Rejection | 15 |
+
 | Confidence | 10 |
+
 | Efficiency | 5 |
+
 | Documentation | 10 |
-| **Base Total** | **100** |
+
+| ****Base Total**** | ****100**** |
 
 Additional bonus points may be available under organizer-defined conditions.
 
@@ -569,37 +997,57 @@ The official evaluator, dataset, and scoring rules remain authoritative.
 On the local V4 benchmark, the production rejection decision produced:
 
 ```text
+
 TP = 98
+
 FN = 2
+
 FP = 0
+
 TN = 100
+
 ```
 
 Rejection metrics:
 
 ```text
+
 Precision = 1.0000
-Recall    = 0.9800
-F1        = 0.9899
+
+Recall    = 0.9800
+
+F1        = 0.9899
+
 ```
 
 For accepted present cases:
 
 ```text
-Mean error   = 114.5358 px
+
+Mean error   = 114.5358 px
+
 Median error = 58.4594 px
-Maximum      = 399.935 px
+
+Maximum      = 399.935 px
+
 ```
 
 Localization thresholds:
 
 ```text
-Within 1 px  = 35.71%
-Within 2 px  = 44.90%
-Within 3 px  = 45.92%
-Within 5 px  = 46.94%
+
+Within 1 px  = 35.71%
+
+Within 2 px  = 44.90%
+
+Within 3 px  = 45.92%
+
+Within 5 px  = 46.94%
+
 Within 10 px = 46.94%
+
 Within 50 px = 48.98%
+
 ```
 
 These are local engineering measurements only, not official Phase 2 leaderboard results.
@@ -611,18 +1059,27 @@ These are local engineering measurements only, not official Phase 2 leaderboard 
 Target evaluation environment:
 
 ```text
+
 4-core x86 CPU
+
 8 GB RAM
+
 Python 3.11
+
 No GPU
+
 No network
+
 ```
 
 Organizer runtime requirement:
 
 ```text
+
 Median <= 5 seconds per pair
+
 Hard timeout = 20 seconds per pair
+
 ```
 
 ## Local Measurement
@@ -630,13 +1087,17 @@ Hard timeout = 20 seconds per pair
 A local Python 3.11 CPU run over 200 engineering cases completed in:
 
 ```text
+
 278.0669 seconds total
+
 ```
 
 Average:
 
 ```text
+
 ~1.39 seconds per pair
+
 ```
 
 This is a local measurement and is not the official evaluator median.
@@ -648,7 +1109,9 @@ This is a local measurement and is not the official evaluator median.
 The production model is:
 
 ```text
+
 models/best_model.pth
+
 ```
 
 The model is loaded locally during inference.
@@ -666,13 +1129,21 @@ The current production image-loading path uses grayscale images.
 RGB input therefore follows:
 
 ```text
+
 RGB Image
-    |
-    v
+
+    |
+
+    v
+
 Grayscale Conversion
-    |
-    v
+
+    |
+
+    v
+
 Normal Production Pipeline
+
 ```
 
 The system can ingest RGB image files, but color information is not currently exploited.
@@ -680,8 +1151,11 @@ The system can ingest RGB image files, but color information is not currently ex
 Therefore:
 
 - RGB files are ingestible.
+
 - Color channels are discarded.
+
 - No color-specific feature is claimed.
+
 - No official Set D bonus result is claimed.
 
 Set D performance should only be claimed after validation on the official optical dataset.
@@ -697,7 +1171,9 @@ Repeated semiconductor structures can generate several strong correlation peaks.
 Therefore:
 
 ```text
+
 Highest Score != Always Correct Location
+
 ```
 
 ## Top-1 Selection
@@ -763,37 +1239,69 @@ The local V4 benchmark is separate from the official Phase 2 dataset.
 # Repository Structure
 
 ```text
+
 SilicoForge/
+
 |
+
 +-- register.py
+
 +-- requirements.txt
+
 +-- generate_dataset.py
+
 +-- failure_analysis.pdf
+
 +-- README.md
+
 |
+
 +-- models/
-|   +-- best_model.pth
+
+|   +-- best_model.pth
+
 |
+
 +-- src/
-    |
-    +-- preprocessing/
-    |   +-- ice.py
-    |
-    +-- coarse_search/
-    |   +-- gspe.py
-    |
-    +-- ai_refinement/
-    |   +-- network.py
-    |   +-- inference.py
-    |   +-- dataset.py
-    |   +-- augmentations.py
-    |   +-- loss.py
-    |   +-- trainer.py
-    |
-    +-- integration/
-    |   +-- pipeline_backup_v2_ai.py
-    |
-    +-- utils/
+
+    |
+
+    +-- preprocessing/
+
+    |   +-- ice.py
+
+    |
+
+    +-- coarse_search/
+
+    |   +-- gspe.py
+
+    |
+
+    +-- ai_refinement/
+
+    |   +-- network.py
+
+    |   +-- inference.py
+
+    |   +-- dataset.py
+
+    |   +-- augmentations.py
+
+    |   +-- loss.py
+
+    |   +-- trainer.py
+
+    |
+
+    +-- integration/
+
+    |   +-- pipeline_backup_v2_ai.py
+
+    |
+
+    +-- utils/
+
 ```
 
 ---
@@ -801,16 +1309,27 @@ SilicoForge/
 # Important Files
 
 | File | Purpose |
+
 |---|---|
+
 | `register.py` | Evaluator-facing production entry point |
+
 | `requirements.txt` | Pinned Python dependencies |
+
 | `generate_dataset.py` | Dataset generation |
+
 | `models/best_model.pth` | Production trained model |
+
 | `src/preprocessing/ice.py` | Image conditioning |
+
 | `src/coarse_search/gspe.py` | Global candidate generation |
+
 | `src/ai_refinement/` | Learned local refinement |
+
 | `src/integration/pipeline_backup_v2_ai.py` | Integrated registration pipeline |
+
 | `failure_analysis.pdf` | Failure analysis and engineering findings |
+
 | `README.md` | Project documentation |
 
 ---
@@ -820,8 +1339,11 @@ SilicoForge/
 ## Clone
 
 ```bash
-git clone -b phase2-development https://github.com/marakahansika27-prog/SilicoForge.git SilicoForge-Phase2
+
+git clone -b phase2-development https\://github.com/marakahansika27-prog/SilicoForge.git SilicoForge-Phase2
+
 cd SilicoForge-Phase2
+
 ```
 
 ## Create Environment
@@ -829,33 +1351,45 @@ cd SilicoForge-Phase2
 Windows:
 
 ```powershell
+
 py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+
+.\\.venv\Scripts\Activate.ps1
+
 ```
 
 Linux / macOS:
 
 ```bash
+
 python3.11 -m venv .venv
+
 source .venv/bin/activate
+
 ```
 
 ## Install
 
 ```bash
+
 python -m pip install -r requirements.txt
+
 ```
 
 ## Verify
 
 ```bash
+
 python -m pip check
+
 ```
 
 ## Run
 
 ```bash
+
 python register.py --input pairs.csv --output predictions.csv
+
 ```
 
 The model is stored in the repository, so inference does not require downloading model weights from the network.
@@ -867,29 +1401,42 @@ The model is stored in the repository, so inference does not require downloading
 The Phase 2 submission package contains the evaluator-facing artifacts:
 
 ```text
+
 register.py
+
 requirements.txt
+
 generate_dataset.py
+
 failure_analysis.pdf
+
 best_model.pth
+
 ```
 
 Before submission, verify:
 
 - all required files are present,
+
 - model weights are included,
+
 - dependencies install successfully,
+
 - `python register.py --help` works,
+
 - the output header is correct,
+
 - every input pair produces exactly one output row,
+
 - rejected rows contain zero pose fields,
+
 - development-only datasets and diagnostics are excluded from the submission package.
 
 ---
 
 # Team
 
-**SilicoForge**
+****SilicoForge****
 
 B V Raju Institute of Technology, Narsapur
 
@@ -906,13 +1453,17 @@ Unless a license file is added, repository contents should be treated as project
 ## Production Command
 
 ```bash
+
 python register.py --input pairs.csv --output predictions.csv
+
 ```
 
 Expected output header:
 
 ```text
+
 pair_id,x,y,theta,scale,found,score
+
 ```
 
 The evaluator-supplied dataset and official scoring rules remain authoritative.
@@ -920,11 +1471,19 @@ The evaluator-supplied dataset and official scoring rules remain authoritative.
 '@
 
 
+
 Write-Host "README.md written successfully:"
+
 Write-Host $path
+
 Write-Host ""
+
 Write-Host "First lines:"
+
 Get-Content $path -TotalCount 10
+
 Write-Host ""
+
 Write-Host "Markdown headings found:"
+
 Select-String -Path $path -Pattern '^# |^## ' | Select-Object -First 40
