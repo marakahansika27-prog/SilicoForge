@@ -528,81 +528,19 @@ scale = 0
 
 # Installation
 
-## Step 1 — Clone the Phase 2 Repository
+## One-Copy-Paste Installation
 
-Open PowerShell:
+Open PowerShell and paste the following block:
 
 ```powershell
 cd C:\Users\marak
 git clone -b phase2-development https://github.com/marakahansika27-prog/SilicoForge.git SilicoForge-Phase2
-```
-
-## Step 2 — Enter the Repository
-
-```powershell
-cd C:\Users\marak\SilicoForge-Phase2
-```
-
-## Step 3 — Verify the Branch
-
-```powershell
-git branch --show-current
-```
-
-Expected:
-
-```text
-phase2-development
-```
-
-## Step 4 — Verify the Production Model
-
-```powershell
-dir models
-```
-
-The repository should contain:
-
-```text
-best_model.pth
-```
-
-This confirms that the production model is available locally.
-
-## Step 5 — Create the Python 3.11 Environment
-
-```powershell
+cd .\SilicoForge-Phase2
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-```
-
-Install the dependencies:
-
-```powershell
 python -m pip install -r requirements.txt
-```
-
-Verify the environment:
-
-```powershell
 python -m pip check
-```
-
-Expected:
-
-```text
-No broken requirements found.
-```
-
-## Step 6 — Verify the Production Interface
-
-```powershell
 python register.py --help
-```
-
-If the help message is displayed, the production entry point is available.
-
----
 
 # Quick Start
 
