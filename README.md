@@ -553,7 +553,7 @@ The demonstration uses two local V4 development cases.
 
 > **Note:** These V4 cases are development examples only. They are not the official Phase 2 A/B/C/D evaluation dataset.
 
-## Step 7 — Copy the Demo Cases
+##   Copy the Demo Cases
 
 Copy the present example:
 
@@ -573,7 +573,7 @@ Copy-Item -Recurse `
 
 > **Development-machine note:** The `C:\d-s\Drift-Sense-V2\...` source paths above are specific to the development environment used to prepare the demonstration. They are not required by the production evaluator.
 
-## Step 8 — Verify the Demo Images
+## Verify the Demo Images
 
 Verify the present case:
 
@@ -623,7 +623,7 @@ True
 
 ## Found Target Demo
 
-### Step 9 — Create the Input CSV
+### Create the Input CSV
 
 ```powershell
 @"
@@ -632,7 +632,7 @@ case_v4_dram_present_000,dataset\hackathon_v4\dram\case_v4_dram_present_000\refe
 "@ | Set-Content pairs_demo.csv
 ```
 
-### Step 10 — Verify the Input
+### Verify the Input
 
 ```powershell
 Get-Content pairs_demo.csv
@@ -645,7 +645,7 @@ pair_id,reference,search
 case_v4_dram_present_000,dataset\hackathon_v4\dram\case_v4_dram_present_000\reference.png,dataset\hackathon_v4\dram\case_v4_dram_present_000\search.png
 ```
 
-### Step 11 — Run Registration
+### Run Registration
 
 ```powershell
 python register.py --input pairs_demo.csv --output predictions_demo.csv
@@ -653,7 +653,7 @@ python register.py --input pairs_demo.csv --output predictions_demo.csv
 
 The system should process the pair and report a successful detection.
 
-### Step 12 — Inspect the Prediction
+### Inspect the Prediction
 
 ```powershell
 Get-Content predictions_demo.csv
@@ -676,7 +676,7 @@ found = 1
 
 ## Not Found / Rejection Demo
 
-### Step 13 — Create the Absent-Case Input CSV
+### Create the Absent-Case Input CSV
 
 ```powershell
 @"
@@ -685,13 +685,13 @@ case_v4_dram_absent_000,dataset\hackathon_v4\dram\case_v4_dram_absent_000\refere
 "@ | Set-Content pairs_absent_demo.csv
 ```
 
-### Step 14 — Run Registration
+### Run Registration
 
 ```powershell
 python register.py --input pairs_absent_demo.csv --output predictions_absent_demo.csv
 ```
 
-### Step 15 — Inspect the Prediction
+### Inspect the Prediction
 
 ```powershell
 Get-Content predictions_absent_demo.csv
