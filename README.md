@@ -541,7 +541,7 @@ py -3.11 -m venv .venv
 python -m pip install -r requirements.txt
 python -m pip check
 python register.py --help
-
+```
 # Quick Start
 
 The following example demonstrates both production outcomes:
